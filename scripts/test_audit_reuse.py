@@ -194,6 +194,52 @@ const searchIcon = 'icon-[fx--search]'
                 },
             )
 
+    def test_same_line_candidates_follow_source_column_order_before_limit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo_root = Path(directory)
+            fixture = repo_root / 'src/same-line.tsx'
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text(
+                "export const fixture = '<button />'; export { Button } from 'antd'\n",
+            )
+
+            full_result = run_audit(repo_root, fixture)
+
+            self.assertEqual(
+                full_result.returncode,
+                0,
+                full_result.stderr or full_result.stdout,
+            )
+            full_payload = json.loads(full_result.stdout)
+            self.assertEqual(
+                [
+                    (item['kind'], item['name'])
+                    for item in full_payload['candidates']
+                ],
+                [
+                    ('native-control', 'button'),
+                    ('component-import', 'antd'),
+                ],
+            )
+
+            limited_result = run_audit(repo_root, fixture, limit=1)
+
+            self.assertEqual(
+                limited_result.returncode,
+                0,
+                limited_result.stderr or limited_result.stdout,
+            )
+            limited_payload = json.loads(limited_result.stdout)
+            self.assertEqual(
+                [
+                    (item['kind'], item['name'])
+                    for item in limited_payload['candidates']
+                ],
+                [('native-control', 'button')],
+            )
+            self.assertEqual(limited_payload['total'], 2)
+            self.assertEqual(limited_payload['omitted'], 1)
+
     def test_directory_target_recurses_supported_source_extensions(self):
         with tempfile.TemporaryDirectory() as directory:
             repo_root = Path(directory)

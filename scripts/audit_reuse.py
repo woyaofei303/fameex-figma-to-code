@@ -131,6 +131,8 @@ def component_import_candidates(
             'name': match.group('name'),
             'file': file_name,
             'line': line_number,
+            '_column': column,
+            '_tie_break': 0,
             'source': compact_source(
                 line,
                 column,
@@ -164,6 +166,8 @@ def line_candidates(
             'name': name,
             'file': file_name,
             'line': line_number,
+            '_column': column,
+            '_tie_break': order,
             'source': compact_source(line, column, end_column),
         }
         if available is not None:
@@ -210,7 +214,24 @@ def audit(repo_root: Path, targets: Sequence[Path]) -> List[Dict[str, object]]:
                     available_icons,
                 )
             )
-    return candidates
+    ordered_candidates = sorted(
+        enumerate(candidates),
+        key=lambda item: (
+            item[1]['file'],
+            item[1]['line'],
+            item[1]['_column'],
+            item[1]['_tie_break'],
+            item[0],
+        ),
+    )
+    return [
+        {
+            key: value
+            for key, value in candidate.items()
+            if not key.startswith('_')
+        }
+        for _, candidate in ordered_candidates
+    ]
 
 
 def result_payload(
