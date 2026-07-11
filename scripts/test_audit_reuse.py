@@ -9,12 +9,19 @@ import unittest
 SCRIPT = Path(__file__).with_name('audit_reuse.py')
 
 
-def run_audit(repo_root: Path, *targets: Path, as_json: bool = True):
+def run_audit(
+    repo_root: Path,
+    *targets: Path,
+    as_json: bool = True,
+    limit: int = 100,
+):
     command = [
         sys.executable,
         str(SCRIPT),
         '--repo-root',
         str(repo_root),
+        '--limit',
+        str(limit),
         *(str(target) for target in targets),
     ]
     if as_json:
@@ -28,361 +35,155 @@ def run_audit(repo_root: Path, *targets: Path, as_json: bool = True):
 
 
 class AuditReuseTest(unittest.TestCase):
-    def test_reports_indirect_icon_constants_and_map_values(self):
-        with tempfile.TemporaryDirectory() as directory:
-            repo_root = Path(directory)
-            fixture = repo_root / 'src/indirect-icons.tsx'
-            fixture.parent.mkdir(parents=True)
-            fixture.write_text(
-                """const searchIcon = 'icon-[fx--search] size-4'
-const layouts = [
-  { icon: 'icon-[fx--orders-buy]' },
-  { icon: 'icon-[fx--orders-sell]' },
-]
-const layoutIcons = {
-  both: 'icon-[fx--orders-default]',
-}
-const unusedFixture = 'icon-[fx--missing]'
-
-export function IndirectIcons({ layout }) {
-  return <i className={cn(searchIcon, layout.icon, layoutIcons[layout.type])} />
-}
-""",
-            )
-
-            result = run_audit(repo_root, fixture)
-
-            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
-            self.assertEqual(
-                json.loads(result.stdout)['icons'],
-                [
-                    {'class': 'icon-[fx--search]', 'available': False},
-                    {'class': 'icon-[fx--orders-buy]', 'available': False},
-                    {'class': 'icon-[fx--orders-sell]', 'available': False},
-                    {'class': 'icon-[fx--orders-default]', 'available': False},
-                ],
-            )
-
-    def test_jsx_text_apostrophe_does_not_hide_following_markup(self):
-        with tempfile.TemporaryDirectory() as directory:
-            repo_root = Path(directory)
-            fixture = repo_root / 'src/apostrophe.tsx'
-            fixture.parent.mkdir(parents=True)
-            fixture.write_text(
-                """export function Apostrophe() {
-  return (
-    <div>
-      Don't hide the remaining markup.
-      <button className="icon-[fx--search]" />
-      <img />
-    </div>
-  )
-}
-""",
-            )
-
-            result = run_audit(repo_root, fixture)
-
-            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
-            payload = json.loads(result.stdout)
-            self.assertEqual(payload['native_controls']['button'], 1)
-            self.assertEqual(payload['images'], 1)
-            self.assertEqual(
-                payload['icons'],
-                [{'class': 'icon-[fx--search]', 'available': False}],
-            )
-
-    def test_type_only_imports_allow_arbitrary_whitespace(self):
-        with tempfile.TemporaryDirectory() as directory:
-            repo_root = Path(directory)
-            fixture = repo_root / 'src/type-whitespace.tsx'
-            fixture.parent.mkdir(parents=True)
-            fixture.write_text(
-                """import type\t{ ButtonProps } from '@fameex/ui'
-import { Button, type\tInputProps } from '@fameex/ui'
-""",
-            )
-
-            result = run_audit(repo_root, fixture)
-
-            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
-            self.assertEqual(
-                json.loads(result.stdout)['libraries'],
-                {'@fameex/ui': ['Button']},
-            )
-
-    def test_ignores_element_markup_inside_regex_literals(self):
-        with tempfile.TemporaryDirectory() as directory:
-            repo_root = Path(directory)
-            fixture = repo_root / 'src/patterns.tsx'
-            fixture.parent.mkdir(parents=True)
-            fixture.write_text(
-                """const markupPattern = /<img|<button|icon-\\[fx--missing\\]/g
-
-export function Patterns() {
-  return <img className="icon-[fx--search]" />
-}
-""",
-            )
-
-            result = run_audit(repo_root, fixture)
-
-            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
-            payload = json.loads(result.stdout)
-            self.assertEqual(payload['native_controls']['button'], 0)
-            self.assertEqual(payload['images'], 1)
-            self.assertEqual(
-                payload['icons'],
-                [{'class': 'icon-[fx--search]', 'available': False}],
-            )
-
-    def test_ignores_icon_classes_rendered_as_jsx_text(self):
-        with tempfile.TemporaryDirectory() as directory:
-            repo_root = Path(directory)
-            fixture = repo_root / 'src/rendered-text.tsx'
-            fixture.parent.mkdir(parents=True)
-            fixture.write_text(
-                """export function RenderedText() {
-  return (
-    <div>
-      icon-[fx--missing]
-      <i className="icon-[fx--search]" />
-    </div>
-  )
-}
-""",
-            )
-
-            result = run_audit(repo_root, fixture)
-
-            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
-            self.assertEqual(
-                json.loads(result.stdout)['icons'],
-                [{'class': 'icon-[fx--search]', 'available': False}],
-            )
-
-    def test_ignores_line_block_and_jsx_comments(self):
-        with tempfile.TemporaryDirectory() as directory:
-            repo_root = Path(directory)
-            fixture = repo_root / 'src/commented.tsx'
-            fixture.parent.mkdir(parents=True)
-            fixture.write_text(
-                """import { Button } from '@fameex/ui'
-// import { Select } from 'antd'
-// <input className="icon-[fx--comment-line]" /><img />
-/*
-import { Input } from '@fameex/ui'
-<select className="icon-[fx--comment-block]" /><img />
-*/
-
-export function Commented() {
-  return (
-    <div>
-      {/* <textarea className="icon-[fx--comment-jsx]" /><img /> */}
-      <button className="icon-[fx--search]" />
-      <img />
-    </div>
-  )
-}
-""",
-            )
-
-            result = run_audit(repo_root, fixture)
-
-            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
-            self.assertEqual(
-                json.loads(result.stdout),
-                {
-                    'libraries': {'@fameex/ui': ['Button']},
-                    'native_controls': {
-                        'button': 1,
-                        'input': 0,
-                        'select': 0,
-                        'textarea': 0,
-                    },
-                    'images': 1,
-                    'icons': [
-                        {'class': 'icon-[fx--search]', 'available': False},
-                    ],
-                },
-            )
-
-    def test_ignores_string_and_template_fixtures(self):
-        with tempfile.TemporaryDirectory() as directory:
-            repo_root = Path(directory)
-            fixture = repo_root / 'src/fixtures.tsx'
-            fixture.parent.mkdir(parents=True)
-            fixture.write_text(
-                """import { Card } from '@heroui/react'
-const singleFixture = '<input className="icon-[fx--single]" /><img />'
-const doubleFixture = "import { Input } from '@fameex/ui'; <button />"
-const templateFixture = `
-  import { Select } from 'antd'
-  <select className="icon-[fx--template]" />
-  <textarea />
-  <img />
-`
-
-export function Fixtures() {
-  return (
-    <div className="icon-[fx--search]">
-      <textarea />
-      <img />
-    </div>
-  )
-}
-""",
-            )
-
-            result = run_audit(repo_root, fixture)
-
-            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
-            self.assertEqual(
-                json.loads(result.stdout),
-                {
-                    'libraries': {'@heroui/react': ['Card']},
-                    'native_controls': {
-                        'button': 0,
-                        'input': 0,
-                        'select': 0,
-                        'textarea': 1,
-                    },
-                    'images': 1,
-                    'icons': [
-                        {'class': 'icon-[fx--search]', 'available': False},
-                    ],
-                },
-            )
-
-    def test_ignores_standalone_type_only_imports(self):
-        with tempfile.TemporaryDirectory() as directory:
-            repo_root = Path(directory)
-            fixture = repo_root / 'src/types.ts'
-            fixture.parent.mkdir(parents=True)
-            fixture.write_text(
-                "import type { ButtonProps, InputProps } from '@fameex/ui'\n",
-            )
-
-            result = run_audit(repo_root, fixture)
-
-            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
-            self.assertEqual(json.loads(result.stdout)['libraries'], {})
-
-    def test_keeps_runtime_components_from_mixed_type_and_value_imports(self):
-        with tempfile.TemporaryDirectory() as directory:
-            repo_root = Path(directory)
-            fixture = repo_root / 'src/components.tsx'
-            fixture.parent.mkdir(parents=True)
-            fixture.write_text(
-                """import {
-  Button,
-  type ButtonProps,
-  Input as FameInput,
-  type InputProps as FameInputProps,
-} from '@fameex/ui'
-""",
-            )
-
-            result = run_audit(repo_root, fixture)
-
-            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
-            self.assertEqual(
-                json.loads(result.stdout)['libraries'],
-                {'@fameex/ui': ['Button', 'Input']},
-            )
-
-    def test_does_not_attribute_an_unsupported_import_to_the_next_library(self):
-        with tempfile.TemporaryDirectory() as directory:
-            repo_root = Path(directory)
-            fixture = repo_root / 'src/page.tsx'
-            fixture.parent.mkdir(parents=True)
-            fixture.write_text(
-                """import { type ReactNode, useState } from 'react'
-import { Button, Input } from '@fameex/ui'
-""",
-            )
-
-            result = run_audit(repo_root, fixture)
-
-            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
-            self.assertEqual(
-                json.loads(result.stdout)['libraries'],
-                {'@fameex/ui': ['Button', 'Input']},
-            )
-
-    def test_reports_reuse_signals_for_a_directory_target(self):
+    def test_file_target_reports_line_candidates_and_icon_availability(self):
         with tempfile.TemporaryDirectory() as directory:
             repo_root = Path(directory)
             icon_list = repo_root / 'packages/icon/output/icon-list.json'
             icon_list.parent.mkdir(parents=True)
-            icon_list.write_text(
-                json.dumps(['icon-[fx--search]', 'icon-[fx--close]']),
-            )
-            fixture = repo_root / 'apps/console/src/features/SearchPanel.tsx'
+            icon_list.write_text(json.dumps(['icon-[fx--search]']))
+            fixture = repo_root / 'src/page.tsx'
             fixture.parent.mkdir(parents=True)
             fixture.write_text(
-                """import { Button, Input as FameInput } from '@fameex/ui';
-import { Select } from 'antd';
-
-export function SearchPanel() {
-  return (
-    <section>
-      <Button />
-      <FameInput />
-      <Select />
-      <button type="button" className="icon-[fx--search]">Search</button>
-      <input className="icon-[fx--missing]" />
-      <img src="/search.png" alt="Search" />
-    </section>
-  );
-}
+                """import { Button } from '@fameex/ui'
+const searchIcon = 'icon-[fx--search]'
+// <button className="icon-[fx--missing]" />
+<img alt="" />
 """,
             )
 
-            result = run_audit(repo_root, repo_root / 'apps/console')
+            result = run_audit(repo_root, fixture)
 
             self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
             self.assertEqual(
                 json.loads(result.stdout),
                 {
-                    'libraries': {
-                        '@fameex/ui': ['Button', 'Input'],
-                        'antd': ['Select'],
-                    },
-                    'native_controls': {
-                        'button': 1,
-                        'input': 1,
-                        'select': 0,
-                        'textarea': 0,
-                    },
-                    'images': 1,
-                    'icons': [
-                        {'class': 'icon-[fx--search]', 'available': True},
-                        {'class': 'icon-[fx--missing]', 'available': False},
+                    'candidates': [
+                        {
+                            'kind': 'component-import',
+                            'name': '@fameex/ui',
+                            'file': 'src/page.tsx',
+                            'line': 1,
+                            'source': "import { Button } from '@fameex/ui'",
+                        },
+                        {
+                            'kind': 'icon-literal',
+                            'name': 'icon-[fx--search]',
+                            'file': 'src/page.tsx',
+                            'line': 2,
+                            'source': "const searchIcon = 'icon-[fx--search]'",
+                            'available': True,
+                        },
+                        {
+                            'kind': 'native-control',
+                            'name': 'button',
+                            'file': 'src/page.tsx',
+                            'line': 3,
+                            'source': '// <button className="icon-[fx--missing]" />',
+                        },
+                        {
+                            'kind': 'icon-literal',
+                            'name': 'icon-[fx--missing]',
+                            'file': 'src/page.tsx',
+                            'line': 3,
+                            'source': '// <button className="icon-[fx--missing]" />',
+                            'available': False,
+                        },
+                        {
+                            'kind': 'image',
+                            'name': 'img',
+                            'file': 'src/page.tsx',
+                            'line': 4,
+                            'source': '<img alt="" />',
+                        },
                     ],
+                    'limit': 100,
+                    'total': 5,
+                    'omitted': 0,
                 },
             )
 
-    def test_accepts_multiple_file_targets_and_prints_a_plain_summary(self):
+    def test_directory_target_recurses_supported_source_extensions(self):
         with tempfile.TemporaryDirectory() as directory:
             repo_root = Path(directory)
-            first = repo_root / 'modules/first.tsx'
-            second = repo_root / 'other/second.vue'
-            first.parent.mkdir(parents=True)
-            second.parent.mkdir(parents=True)
-            first.write_text("import { Card } from '@heroui/react';\n<button />\n")
-            second.write_text("import { ElInput } from 'element-plus';\n<img />\n")
+            target = repo_root / 'arbitrary-area'
+            nested = target / 'nested'
+            nested.mkdir(parents=True)
+            (target / 'first.js').write_text(
+                "import { Select } from 'antd'\n<select />\n",
+            )
+            (nested / 'second.vue').write_text('<input />\n<textarea />\n')
+            (nested / 'ignored.txt').write_text('<button />\n')
 
-            result = run_audit(repo_root, first, second, as_json=False)
+            result = run_audit(repo_root, target)
 
             self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
-            self.assertIn('@heroui/react: Card', result.stdout)
-            self.assertIn('element-plus: ElInput', result.stdout)
-            self.assertIn(
-                'Native controls: button=1, input=0, select=0, textarea=0',
-                result.stdout,
+            payload = json.loads(result.stdout)
+            self.assertEqual(
+                [
+                    (item['file'], item['line'], item['kind'], item['name'])
+                    for item in payload['candidates']
+                ],
+                [
+                    ('arbitrary-area/first.js', 1, 'component-import', 'antd'),
+                    ('arbitrary-area/first.js', 2, 'native-control', 'select'),
+                    (
+                        'arbitrary-area/nested/second.vue',
+                        1,
+                        'native-control',
+                        'input',
+                    ),
+                    (
+                        'arbitrary-area/nested/second.vue',
+                        2,
+                        'native-control',
+                        'textarea',
+                    ),
+                ],
             )
-            self.assertIn('Images: 1', result.stdout)
+            self.assertEqual(payload['total'], 4)
+            self.assertEqual(payload['omitted'], 0)
+
+    def test_limit_bounds_json_candidates_and_reports_omitted_count(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo_root = Path(directory)
+            fixture = repo_root / 'src/limited.jsx'
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text(
+                """<button />
+<input />
+<img />
+<i className="icon-[fx--search]" />
+""",
+            )
+
+            result = run_audit(repo_root, fixture, limit=2)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            payload = json.loads(result.stdout)
+            self.assertEqual(len(payload['candidates']), 2)
+            self.assertEqual(payload['limit'], 2)
+            self.assertEqual(payload['total'], 4)
+            self.assertEqual(payload['omitted'], 2)
+
+    def test_plain_output_labels_candidates_and_manual_judgement(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo_root = Path(directory)
+            fixture = repo_root / 'src/plain.tsx'
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text('<button />\n<img />\n')
+
+            result = run_audit(
+                repo_root,
+                fixture,
+                as_json=False,
+                limit=1,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertIn('Reuse audit candidates', result.stdout)
+            self.assertIn('src/plain.tsx:1 [native-control] button', result.stdout)
+            self.assertIn('omitted 1', result.stdout)
+            self.assertIn('Candidates only; agent judgement required', result.stdout)
 
 
 if __name__ == '__main__':
