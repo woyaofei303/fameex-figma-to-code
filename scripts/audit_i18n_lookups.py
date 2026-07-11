@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import ast
 import json
 from pathlib import Path
 import re
@@ -19,7 +18,19 @@ CONDITIONAL_PATTERN = re.compile(
     + r')\s*$',
     re.DOTALL,
 )
-TRANSLATION_CALL_PATTERN = re.compile(r'\bt\s*\(')
+HEX_DIGITS = frozenset('0123456789abcdefABCDEF')
+SIMPLE_ESCAPES = {
+    "'": "'",
+    '"': '"',
+    '\\': '\\',
+    'n': '\n',
+    'r': '\r',
+    't': '\t',
+    'b': '\b',
+    'f': '\f',
+    'v': '\v',
+    '0': '\0',
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -102,21 +113,43 @@ def source_files(sources: Sequence[Path]) -> List[Path]:
 
 def first_argument(content: str, start: int) -> str:
     nesting: List[str] = []
-    quote = ''
+    state = 'normal'
     escaped = False
     pairs = {')': '(', ']': '[', '}': '{'}
     index = start
     while index < len(content):
         character = content[index]
-        if quote:
+        next_character = content[index + 1] if index + 1 < len(content) else ''
+        if state in {'single', 'double', 'template'}:
             if escaped:
                 escaped = False
             elif character == '\\':
                 escaped = True
-            elif character == quote:
-                quote = ''
-        elif character in "'\"`":
-            quote = character
+            elif (
+                (state == 'single' and character == "'")
+                or (state == 'double' and character == '"')
+                or (state == 'template' and character == '`')
+            ):
+                state = 'normal'
+        elif state == 'line-comment':
+            if character in '\r\n':
+                state = 'normal'
+        elif state == 'block-comment':
+            if character == '*' and next_character == '/':
+                state = 'normal'
+                index += 1
+        elif character == '/' and next_character == '/':
+            state = 'line-comment'
+            index += 1
+        elif character == '/' and next_character == '*':
+            state = 'block-comment'
+            index += 1
+        elif character == "'":
+            state = 'single'
+        elif character == '"':
+            state = 'double'
+        elif character == '`':
+            state = 'template'
         elif character in '([{':
             nesting.append(character)
         elif character in ')]}':
@@ -130,8 +163,144 @@ def first_argument(content: str, start: int) -> str:
     return content[start:]
 
 
+def is_identifier_character(character: str) -> bool:
+    return bool(character) and (
+        character.isalnum() or character in {'_', '$'}
+    )
+
+
+def translation_call_starts(content: str) -> List[int]:
+    starts: List[int] = []
+    state = 'normal'
+    escaped = False
+    index = 0
+    while index < len(content):
+        character = content[index]
+        next_character = content[index + 1] if index + 1 < len(content) else ''
+        if state in {'single', 'double', 'template'}:
+            if escaped:
+                escaped = False
+            elif character == '\\':
+                escaped = True
+            elif (
+                (state == 'single' and character == "'")
+                or (state == 'double' and character == '"')
+                or (state == 'template' and character == '`')
+            ):
+                state = 'normal'
+        elif state == 'line-comment':
+            if character in '\r\n':
+                state = 'normal'
+        elif state == 'block-comment':
+            if character == '*' and next_character == '/':
+                state = 'normal'
+                index += 1
+        elif character == '/' and next_character == '/':
+            state = 'line-comment'
+            index += 1
+        elif character == '/' and next_character == '*':
+            state = 'block-comment'
+            index += 1
+        elif character == "'":
+            state = 'single'
+        elif character == '"':
+            state = 'double'
+        elif character == '`':
+            state = 'template'
+        elif character == 't':
+            previous = content[index - 1] if index else ''
+            cursor = index + 1
+            while cursor < len(content) and content[cursor].isspace():
+                cursor += 1
+            if (
+                previous != '.'
+                and not is_identifier_character(previous)
+                and cursor < len(content)
+                and content[cursor] == '('
+            ):
+                starts.append(cursor + 1)
+        index += 1
+    return starts
+
+
+def decode_hex_escape(
+    body: str,
+    start: int,
+    length: int,
+    escape_name: str,
+) -> str:
+    end = start + length
+    digits = body[start:end]
+    if len(digits) != length or any(digit not in HEX_DIGITS for digit in digits):
+        raise ValueError(
+            'invalid JavaScript string literal: invalid {}'.format(escape_name),
+        )
+    return chr(int(digits, 16))
+
+
 def literal_value(literal: str) -> str:
-    return ast.literal_eval(literal)
+    body = literal[1:-1]
+    decoded: List[str] = []
+    index = 0
+    while index < len(body):
+        character = body[index]
+        if character in {'\r', '\n', '\u2028', '\u2029'}:
+            raise ValueError(
+                'invalid JavaScript string literal: unescaped line terminator',
+            )
+        if character != '\\':
+            decoded.append(character)
+            index += 1
+            continue
+
+        index += 1
+        if index >= len(body):
+            raise ValueError(
+                'invalid JavaScript string literal: trailing backslash',
+            )
+        escape = body[index]
+        if escape in {'\n', '\u2028', '\u2029'}:
+            index += 1
+            continue
+        if escape == '\r':
+            index += 2 if index + 1 < len(body) and body[index + 1] == '\n' else 1
+            continue
+        if escape in SIMPLE_ESCAPES:
+            if escape == '0' and index + 1 < len(body) and body[index + 1].isdigit():
+                raise ValueError(
+                    'invalid JavaScript string literal: legacy octal escape',
+                )
+            decoded.append(SIMPLE_ESCAPES[escape])
+            index += 1
+            continue
+        if escape == 'x':
+            decoded.append(decode_hex_escape(body, index + 1, 2, '\\x escape'))
+            index += 3
+            continue
+        if escape == 'u':
+            if index + 1 < len(body) and body[index + 1] == '{':
+                closing = body.find('}', index + 2)
+                digits = body[index + 2:closing] if closing != -1 else ''
+                if (
+                    not digits
+                    or any(digit not in HEX_DIGITS for digit in digits)
+                    or int(digits, 16) > 0x10FFFF
+                ):
+                    raise ValueError(
+                        'invalid JavaScript string literal: invalid \\u{} escape',
+                    )
+                decoded.append(chr(int(digits, 16)))
+                index = closing + 1
+                continue
+            decoded.append(decode_hex_escape(body, index + 1, 4, '\\u escape'))
+            index += 5
+            continue
+        raise ValueError(
+            'invalid JavaScript string literal: unsupported escape \\{}'.format(
+                escape,
+            ),
+        )
+    return ''.join(decoded)
 
 
 def keys_from_argument(argument: str) -> Set[str]:
@@ -155,8 +324,8 @@ def referenced_keys(paths: Sequence[Path], explicit_keys: Sequence[str]) -> Set[
             content = path.read_text(encoding='utf-8')
         except (OSError, UnicodeError) as error:
             raise ValueError('cannot read source {}: {}'.format(path, error))
-        for match in TRANSLATION_CALL_PATTERN.finditer(content):
-            referenced.update(keys_from_argument(first_argument(content, match.end())))
+        for start in translation_call_starts(content):
+            referenced.update(keys_from_argument(first_argument(content, start)))
     return referenced
 
 

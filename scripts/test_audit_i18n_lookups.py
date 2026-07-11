@@ -131,6 +131,55 @@ class AuditI18nLookupsTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
             self.assertEqual(json.loads(result.stdout)['referenced_count'], 2)
 
+    def test_ignores_ghost_calls_outside_global_normal_code(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            namespace = self.write_namespace(root, {'real': 'Real'})
+            source = root / 'lexical.tsx'
+            source.write_text(
+                '''const single = "t('inside-double-string')"
+const double = 't("inside-single-string")'
+const template = `t('inside-template')`
+// t('inside-line-comment')
+/* t('inside-block-comment') */
+object.t('member-call')
+object?.t('optional-member-call')
+$t('dollar-prefixed-call')
+t('real')
+''',
+                encoding='utf-8',
+            )
+
+            result = run_audit(namespace, source)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(json.loads(result.stdout)['referenced_count'], 1)
+
+    def test_decodes_javascript_unicode_code_point_escape(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            namespace = self.write_namespace(root, {'a': 'A'})
+            source = root / 'unicode.ts'
+            source.write_text("t('\\u{0061}')\n", encoding='utf-8')
+
+            result = run_audit(namespace, source)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(json.loads(result.stdout)['referenced_count'], 1)
+
+    def test_invalid_javascript_escape_exits_two_without_traceback(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            namespace = self.write_namespace(root, {'unused': 'Unused'})
+            source = root / 'invalid.ts'
+            source.write_text("t('\\xG1')\n", encoding='utf-8')
+
+            result = run_audit(namespace, source)
+
+            self.assertEqual(result.returncode, 2, result.stderr or result.stdout)
+            self.assertIn('invalid JavaScript string literal', result.stderr)
+            self.assertNotIn('Traceback', result.stderr)
+
     def test_directory_sources_recurse_supported_extensions_only(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -154,6 +203,23 @@ class AuditI18nLookupsTest(unittest.TestCase):
 
             self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
             self.assertEqual(json.loads(result.stdout)['referenced_count'], 4)
+
+    def test_repeatable_file_sources_all_contribute_lookups(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            namespace = self.write_namespace(
+                root,
+                {'first': 'First', 'second': 'Second'},
+            )
+            first = root / 'first.ts'
+            first.write_text("t('first')\n", encoding='utf-8')
+            second = root / 'second.tsx'
+            second.write_text("t('second')\n", encoding='utf-8')
+
+            result = run_audit(namespace, first, second)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(json.loads(result.stdout)['referenced_count'], 2)
 
     def test_mismatch_json_is_sorted_deterministically_and_exits_one(self):
         with tempfile.TemporaryDirectory() as directory:
