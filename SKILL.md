@@ -21,6 +21,8 @@ Preserve unrelated changes. Stop on an invalid node ID, unrecoverable Figma auth
 
 Read [references/dependency-bootstrap.md](references/dependency-bootstrap.md) before resolving missing skills. Never overwrite an existing skill directory.
 
+After preflight, an existing branch selects `audit-existing`: fix a merge-base, create a route/node/code manifest, and load [references/existing-implementation-audit.md](references/existing-implementation-audit.md) before repository mapping.
+
 ## Required Sub-Skills
 
 Load only when its phase begins:
