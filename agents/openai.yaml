@@ -1,0 +1,4 @@
+interface:
+  display_name: "FameEX Figma to Code"
+  short_description: "Implement FameEX interfaces from exact Figma node links"
+  default_prompt: "Use $fameex-figma-to-code to implement this exact Figma node in fameex-web and validate it in a real browser."
