@@ -28,6 +28,139 @@ def run_audit(repo_root: Path, *targets: Path, as_json: bool = True):
 
 
 class AuditReuseTest(unittest.TestCase):
+    def test_reports_indirect_icon_constants_and_map_values(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo_root = Path(directory)
+            fixture = repo_root / 'src/indirect-icons.tsx'
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text(
+                """const searchIcon = 'icon-[fx--search] size-4'
+const layouts = [
+  { icon: 'icon-[fx--orders-buy]' },
+  { icon: 'icon-[fx--orders-sell]' },
+]
+const layoutIcons = {
+  both: 'icon-[fx--orders-default]',
+}
+const unusedFixture = 'icon-[fx--missing]'
+
+export function IndirectIcons({ layout }) {
+  return <i className={cn(searchIcon, layout.icon, layoutIcons[layout.type])} />
+}
+""",
+            )
+
+            result = run_audit(repo_root, fixture)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(
+                json.loads(result.stdout)['icons'],
+                [
+                    {'class': 'icon-[fx--search]', 'available': False},
+                    {'class': 'icon-[fx--orders-buy]', 'available': False},
+                    {'class': 'icon-[fx--orders-sell]', 'available': False},
+                    {'class': 'icon-[fx--orders-default]', 'available': False},
+                ],
+            )
+
+    def test_jsx_text_apostrophe_does_not_hide_following_markup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo_root = Path(directory)
+            fixture = repo_root / 'src/apostrophe.tsx'
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text(
+                """export function Apostrophe() {
+  return (
+    <div>
+      Don't hide the remaining markup.
+      <button className="icon-[fx--search]" />
+      <img />
+    </div>
+  )
+}
+""",
+            )
+
+            result = run_audit(repo_root, fixture)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            payload = json.loads(result.stdout)
+            self.assertEqual(payload['native_controls']['button'], 1)
+            self.assertEqual(payload['images'], 1)
+            self.assertEqual(
+                payload['icons'],
+                [{'class': 'icon-[fx--search]', 'available': False}],
+            )
+
+    def test_type_only_imports_allow_arbitrary_whitespace(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo_root = Path(directory)
+            fixture = repo_root / 'src/type-whitespace.tsx'
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text(
+                """import type\t{ ButtonProps } from '@fameex/ui'
+import { Button, type\tInputProps } from '@fameex/ui'
+""",
+            )
+
+            result = run_audit(repo_root, fixture)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(
+                json.loads(result.stdout)['libraries'],
+                {'@fameex/ui': ['Button']},
+            )
+
+    def test_ignores_element_markup_inside_regex_literals(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo_root = Path(directory)
+            fixture = repo_root / 'src/patterns.tsx'
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text(
+                """const markupPattern = /<img|<button|icon-\\[fx--missing\\]/g
+
+export function Patterns() {
+  return <img className="icon-[fx--search]" />
+}
+""",
+            )
+
+            result = run_audit(repo_root, fixture)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            payload = json.loads(result.stdout)
+            self.assertEqual(payload['native_controls']['button'], 0)
+            self.assertEqual(payload['images'], 1)
+            self.assertEqual(
+                payload['icons'],
+                [{'class': 'icon-[fx--search]', 'available': False}],
+            )
+
+    def test_ignores_icon_classes_rendered_as_jsx_text(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo_root = Path(directory)
+            fixture = repo_root / 'src/rendered-text.tsx'
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text(
+                """export function RenderedText() {
+  return (
+    <div>
+      icon-[fx--missing]
+      <i className="icon-[fx--search]" />
+    </div>
+  )
+}
+""",
+            )
+
+            result = run_audit(repo_root, fixture)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(
+                json.loads(result.stdout)['icons'],
+                [{'class': 'icon-[fx--search]', 'available': False}],
+            )
+
     def test_ignores_line_block_and_jsx_comments(self):
         with tempfile.TemporaryDirectory() as directory:
             repo_root = Path(directory)

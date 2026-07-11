@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import re
 import sys
-from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from typing import Dict, Iterable, List, NamedTuple, Optional, Sequence, Set, Tuple
 
 
 SOURCE_EXTENSIONS = {'.ts', '.tsx', '.js', '.jsx', '.vue'}
@@ -27,6 +27,35 @@ ICON_PATTERN = re.compile(r'icon-\[fx--[A-Za-z0-9_-]+\]')
 CLASS_ATTRIBUTE_PATTERN = re.compile(
     r'(?:^|\s)(?:class|className|:class|v-bind:class)\s*=\s*$',
 )
+TAG_START_PATTERN = re.compile(r'<(?P<closing>/)?(?P<name>[A-Za-z][\w:.-]*)')
+VOID_ELEMENTS = {
+    'area',
+    'base',
+    'br',
+    'col',
+    'embed',
+    'hr',
+    'img',
+    'input',
+    'link',
+    'meta',
+    'param',
+    'source',
+    'track',
+    'wbr',
+}
+
+
+class StringToken(NamedTuple):
+    start: int
+    value: str
+    class_context: bool
+
+
+class LexedSource(NamedTuple):
+    structural: str
+    strings: List[StringToken]
+    class_expression_spans: List[Tuple[int, int]]
 
 
 def parse_args() -> argparse.Namespace:
@@ -58,14 +87,14 @@ def source_files(targets: Sequence[Path]) -> List[Path]:
 
 
 def imported_components(clause: str) -> Iterable[str]:
-    if clause.lstrip().startswith('type '):
+    if re.match(r'type\b', clause.lstrip()):
         return
 
     named_match = re.search(r'\{(.*?)\}', clause, re.DOTALL)
     if named_match:
         for item in named_match.group(1).split(','):
             imported_name = item.strip()
-            if imported_name.startswith('type '):
+            if re.match(r'type\b', imported_name):
                 continue
             imported_name = re.split(r'\s+as\s+', imported_name, maxsplit=1)[0]
             if re.fullmatch(r'[A-Za-z_$][\w$]*', imported_name):
@@ -78,138 +107,330 @@ def imported_components(clause: str) -> Iterable[str]:
             yield default_name
 
 
-def sanitized_views(content: str) -> Tuple[str, str]:
-    structural: List[str] = []
-    icon_source: List[str] = []
-    state = 'code'
-    quote = ''
-    preserve_string_for_icons = False
-    in_tag = False
-    tag_expression_depth = 0
-    class_binding_depth: Optional[int] = None
-    tag_buffer = ''
-    index = 0
+def hidden_text(value: str) -> str:
+    return ''.join('\n' if character == '\n' else ' ' for character in value)
 
-    def append_hidden(character: str) -> None:
-        hidden = '\n' if character == '\n' else ' '
-        structural.append(hidden)
-        icon_source.append(hidden)
 
+def consume_string(content: str, start: int) -> Tuple[int, str]:
+    quote = content[start]
+    index = start + 1
+    while index < len(content):
+        if content[index] == '\\' and index + 1 < len(content):
+            index += 2
+            continue
+        if content[index] == quote:
+            return index + 1, content[start + 1 : index]
+        index += 1
+    return len(content), content[start + 1 :]
+
+
+def consume_comment(content: str, start: int, terminator: str) -> int:
+    end = content.find(terminator, start + 2)
+    return len(content) if end == -1 else end + len(terminator)
+
+
+def regex_can_start(structural: Sequence[str]) -> bool:
+    prefix = ''.join(structural[-120:]).rstrip()
+    if not prefix:
+        return True
+    if prefix.endswith('=>'):
+        return True
+    if prefix[-1] in '=([{,:;!?&|~+-*%^':
+        return True
+    return bool(
+        re.search(
+            r'\b(?:case|delete|in|instanceof|new|of|return|throw|typeof|void|yield)$',
+            prefix,
+        )
+    )
+
+
+def consume_regex(content: str, start: int) -> int:
+    index = start + 1
+    in_character_class = False
     while index < len(content):
         character = content[index]
-        following = content[index + 1] if index + 1 < len(content) else ''
-
-        if state == 'line_comment':
-            if character == '\n':
-                structural.append(character)
-                icon_source.append(character)
-                if in_tag:
-                    tag_buffer += character
-                state = 'code'
-            else:
-                append_hidden(character)
-                if in_tag:
-                    tag_buffer += ' '
-            index += 1
+        if character == '\\' and index + 1 < len(content):
+            index += 2
             continue
+        if character == '[':
+            in_character_class = True
+        elif character == ']':
+            in_character_class = False
+        elif character == '/' and not in_character_class:
+            index += 1
+            while index < len(content) and content[index].isalpha():
+                index += 1
+            return index
+        elif character == '\n':
+            return start + 1
+        index += 1
+    return start + 1
 
-        if state in ('block_comment', 'html_comment'):
-            terminator = '*/' if state == 'block_comment' else '-->'
-            if content.startswith(terminator, index):
-                for terminator_character in terminator:
-                    append_hidden(terminator_character)
-                    if in_tag:
-                        tag_buffer += ' '
-                index += len(terminator)
-                state = 'code'
+
+def tag_at(content: str, index: int) -> Optional[Tuple[bool, str]]:
+    if content.startswith('</>', index):
+        return True, ''
+    if content.startswith('<>', index):
+        return False, ''
+    match = TAG_START_PATTERN.match(content, index)
+    if not match:
+        return None
+    return bool(match.group('closing')), match.group('name')
+
+
+def lex_source(content: str) -> LexedSource:
+    structural: List[str] = []
+    strings: List[StringToken] = []
+    class_expression_spans: List[Tuple[int, int]] = []
+    element_parent_modes: List[str] = []
+    mode = 'code'
+    raw_tag: Optional[str] = None
+    jsx_expression_depth = 0
+    tag_parent_mode = 'code'
+    tag_closing = False
+    tag_name = ''
+    tag_buffer = ''
+    tag_expression_depth = 0
+    class_binding_depth: Optional[int] = None
+    class_expression_start: Optional[int] = None
+    index = 0
+
+    def hide(end: int, include_in_tag: bool = False) -> None:
+        nonlocal index, tag_buffer
+        masked = hidden_text(content[index:end])
+        structural.extend(masked)
+        if include_in_tag:
+            tag_buffer += masked
+        index = end
+
+    def begin_tag(closing: bool, name: str) -> None:
+        nonlocal mode, tag_parent_mode, tag_closing, tag_name
+        nonlocal tag_buffer, tag_expression_depth
+        nonlocal class_binding_depth, class_expression_start
+        tag_parent_mode = mode
+        tag_closing = closing
+        tag_name = name
+        tag_buffer = ''
+        tag_expression_depth = 0
+        class_binding_depth = None
+        class_expression_start = None
+        mode = 'tag'
+
+    while index < len(content):
+        if mode == 'raw_text':
+            closing = tag_at(content, index)
+            if closing and closing == (True, raw_tag or ''):
+                begin_tag(*closing)
                 continue
-            append_hidden(character)
-            if in_tag:
-                tag_buffer += '\n' if character == '\n' else ' '
-            index += 1
+            hide(index + 1)
             continue
 
-        if state == 'string':
-            structural.append('\n' if character == '\n' else ' ')
-            if preserve_string_for_icons:
-                icon_source.append(character)
-            else:
-                icon_source.append('\n' if character == '\n' else ' ')
-            if in_tag:
-                tag_buffer += '\n' if character == '\n' else ' '
-
-            if character == '\\' and following:
-                structural.append('\n' if following == '\n' else ' ')
-                if preserve_string_for_icons:
-                    icon_source.append(following)
-                else:
-                    icon_source.append('\n' if following == '\n' else ' ')
-                if in_tag:
-                    tag_buffer += '\n' if following == '\n' else ' '
-                index += 2
+        if mode == 'jsx_text':
+            if content.startswith('<!--', index):
+                hide(consume_comment(content, index, '-->'))
                 continue
-            if character == quote:
-                state = 'code'
-                preserve_string_for_icons = False
-            index += 1
+            tag = tag_at(content, index)
+            if tag:
+                begin_tag(*tag)
+                continue
+            if content[index] == '{':
+                structural.append('{')
+                jsx_expression_depth = 1
+                mode = 'code'
+                index += 1
+                continue
+            hide(index + 1)
             continue
+
+        if mode == 'code' and raw_tag == 'script':
+            closing = tag_at(content, index)
+            if closing == (True, 'script'):
+                begin_tag(*closing)
+                continue
 
         if content.startswith('<!--', index):
-            state = 'html_comment'
+            hide(
+                consume_comment(content, index, '-->'),
+                include_in_tag=mode == 'tag',
+            )
             continue
-        if character == '/' and following == '/':
-            state = 'line_comment'
+        if content.startswith('//', index):
+            newline = content.find('\n', index + 2)
+            hide(
+                len(content) if newline == -1 else newline,
+                include_in_tag=mode == 'tag',
+            )
             continue
-        if character == '/' and following == '*':
-            state = 'block_comment'
+        if content.startswith('/*', index):
+            hide(
+                consume_comment(content, index, '*/'),
+                include_in_tag=mode == 'tag',
+            )
             continue
+
+        character = content[index]
         if character in ("'", '"', '`'):
-            quote = character
-            preserve_string_for_icons = bool(
-                in_tag
+            end, value = consume_string(content, index)
+            class_context = bool(
+                mode == 'tag'
                 and (
                     class_binding_depth is not None
                     or CLASS_ATTRIBUTE_PATTERN.search(tag_buffer)
                 )
             )
-            structural.append(' ')
-            icon_source.append(character if preserve_string_for_icons else ' ')
-            if in_tag:
-                tag_buffer += ' '
-            state = 'string'
+            strings.append(StringToken(index, value, class_context))
+            hide(end, include_in_tag=mode == 'tag')
+            continue
+
+        if character == '/' and (
+            mode == 'code' or (mode == 'tag' and tag_expression_depth > 0)
+        ) and regex_can_start(structural):
+            end = consume_regex(content, index)
+            if end > index + 1:
+                hide(end, include_in_tag=mode == 'tag')
+                continue
+
+        if mode == 'code':
+            tag = tag_at(content, index)
+            if tag:
+                begin_tag(*tag)
+                continue
+
+        structural.append(character)
+
+        if mode == 'code':
+            if jsx_expression_depth > 0:
+                if character == '{':
+                    jsx_expression_depth += 1
+                elif character == '}':
+                    jsx_expression_depth -= 1
+                    if jsx_expression_depth == 0:
+                        mode = 'jsx_text'
             index += 1
             continue
 
-        structural.append(character)
-        icon_source.append(character)
-
-        if not in_tag and character == '<':
-            remainder = content[index + 1 :]
-            if re.match(r'/?[A-Za-z][\w:.-]*', remainder):
-                in_tag = True
-                tag_expression_depth = 0
+        tag_buffer += character
+        if character == '{':
+            if (
+                class_binding_depth is None
+                and CLASS_ATTRIBUTE_PATTERN.search(tag_buffer[:-1])
+            ):
+                class_binding_depth = tag_expression_depth + 1
+                class_expression_start = index + 1
+            tag_expression_depth += 1
+        elif character == '}' and tag_expression_depth > 0:
+            if class_binding_depth == tag_expression_depth:
+                if class_expression_start is not None:
+                    class_expression_spans.append(
+                        (class_expression_start, index),
+                    )
                 class_binding_depth = None
-                tag_buffer = '<'
-        elif in_tag:
-            tag_buffer += character
-            if character == '{':
-                tag_expression_depth += 1
-                if (
-                    class_binding_depth is None
-                    and CLASS_ATTRIBUTE_PATTERN.search(tag_buffer[:-1])
-                ):
-                    class_binding_depth = tag_expression_depth
-            elif character == '}' and tag_expression_depth > 0:
-                if class_binding_depth == tag_expression_depth:
-                    class_binding_depth = None
-                tag_expression_depth -= 1
-            elif character == '>' and tag_expression_depth == 0:
-                in_tag = False
-                tag_buffer = ''
-
+                class_expression_start = None
+            tag_expression_depth -= 1
+        elif character == '>' and tag_expression_depth == 0:
+            normalized_name = tag_name.lower()
+            self_closing = (
+                tag_buffer.rstrip().endswith('/>')
+                or normalized_name in VOID_ELEMENTS
+            )
+            if tag_closing:
+                mode = element_parent_modes.pop() if element_parent_modes else 'code'
+                if normalized_name == raw_tag:
+                    raw_tag = None
+            elif self_closing:
+                mode = tag_parent_mode
+            else:
+                element_parent_modes.append(tag_parent_mode)
+                if normalized_name == 'script':
+                    raw_tag = 'script'
+                    mode = 'code'
+                elif normalized_name == 'style':
+                    raw_tag = 'style'
+                    mode = 'raw_text'
+                else:
+                    mode = 'jsx_text'
+            tag_buffer = ''
         index += 1
 
-    return ''.join(structural), ''.join(icon_source)
+    return LexedSource(
+        ''.join(structural),
+        strings,
+        class_expression_spans,
+    )
+
+
+def token_container_names(structural: str, token_start: int) -> Iterable[str]:
+    prefix = structural[:token_start]
+    assignments = list(
+        re.finditer(
+            r'\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*([\[{])',
+            prefix,
+        )
+    )
+    for match in reversed(assignments):
+        opening = match.group(2)
+        closing = ']' if opening == '[' else '}'
+        segment = structural[match.end() - 1 : token_start]
+        if segment.count(opening) > segment.count(closing):
+            yield match.group(1)
+
+
+def token_is_class_referenced(
+    token: StringToken,
+    structural: str,
+    class_references: str,
+) -> bool:
+    prefix = structural[: token.start]
+    identifier = re.search(
+        r'\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*$',
+        prefix[-500:],
+    )
+    if identifier and re.search(
+        r'(?<![\w$]){}(?![\w$])'.format(re.escape(identifier.group(1))),
+        class_references,
+    ):
+        return True
+
+    property_name = re.search(r'([A-Za-z_$][\w$]*)\s*:\s*$', prefix[-200:])
+    if property_name and re.search(
+        r'\.\s*{}\b'.format(re.escape(property_name.group(1))),
+        class_references,
+    ):
+        return True
+
+    return any(
+        re.search(
+            r'(?<![\w$]){}(?![\w$])'.format(re.escape(container)),
+            class_references,
+        )
+        for container in token_container_names(structural, token.start)
+    )
+
+
+def semantic_icon_classes(lexed: LexedSource) -> Iterable[str]:
+    class_references = '\n'.join(
+        [
+            lexed.structural[start:end]
+            for start, end in lexed.class_expression_spans
+        ]
+        + [token.value for token in lexed.strings if token.class_context]
+    )
+    for token in lexed.strings:
+        icons = ICON_PATTERN.findall(token.value)
+        if not icons:
+            continue
+        if token.class_context:
+            yield from icons
+            continue
+        if '<' in token.value or re.search(r'\bimport\b', token.value):
+            continue
+        if token_is_class_referenced(
+            token,
+            lexed.structural,
+            class_references,
+        ):
+            yield from icons
 
 
 def load_available_icons(repo_root: Path) -> Set[str]:
@@ -240,19 +461,19 @@ def audit(repo_root: Path, targets: Sequence[Path]) -> Dict[str, object]:
 
     for path in source_files(targets):
         content = path.read_text(encoding='utf-8', errors='ignore')
-        structural, icon_source = sanitized_views(content)
+        lexed = lex_source(content)
         for match in IMPORT_PATTERN.finditer(content):
-            if not structural.startswith('import', match.start()):
+            if not lexed.structural.startswith('import', match.start()):
                 continue
             library_components[match.group('library')].update(
                 imported_components(match.group('clause')),
             )
         for control in NATIVE_CONTROLS:
             native_controls[control] += len(
-                re.findall(r'<{}\b'.format(control), structural),
+                re.findall(r'<{}\b'.format(control), lexed.structural),
             )
-        image_count += len(re.findall(r'<img\b', structural))
-        for icon_class in ICON_PATTERN.findall(icon_source):
+        image_count += len(re.findall(r'<img\b', lexed.structural))
+        for icon_class in semantic_icon_classes(lexed):
             if icon_class not in seen_icons:
                 seen_icons.add(icon_class)
                 icon_classes.append(icon_class)
