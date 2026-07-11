@@ -78,7 +78,7 @@ For customer Web, frontend-owned copy and Simplified Chinese source coverage are
 - Add another locale only when explicitly requested or supplied; preserve translation-team content and key shape.
 - Keep dotted lookups as nested JSON and verify callsite, namespace filename, and JSON path together.
 - Do not localize backend-owned content without a confirmed contract.
-- When a new namespace has only `zh-CN` / `zh_CN` source resources, validate fallback through at least one supported non-`zh` locale before completion and prove that source copy renders instead of a raw key. If the repository uses an explicit source-only namespace allow-list, register only the new namespace and test that an unregistered namespace retains its previous behavior.
+- When a new namespace has only `zh-CN` / `zh_CN` source resources, validate fallback through at least one supported non-`zh` locale before completion and prove that source copy renders instead of a raw key. If the repository uses an explicit source-only namespace allow-list, add only the new namespace to the existing allow-list, preserve all existing entries, and test that an unregistered namespace retains its previous behavior.
 - Never add other-locale files solely to suppress a raw key.
 - Check other-locale parity only when those translated resources already exist or are explicitly in scope; never create files solely for parity.
 
