@@ -21,7 +21,7 @@ Keep only useful review evidence: desktop screenshot at the Figma width, applica
 5. Exercise only interactions established by Figma, PRD/backend contract, existing behavior, or explicit user instruction. Check focus, keyboard, disabled, loading, validation, and feedback states when applicable.
 6. Verify each exercised link in the current branch; otherwise record it as a dependency.
 7. Re-snapshot after navigation or material DOM changes. Inspect console/network errors exposed by the workflow.
-8. Load `zh-CN`; check raw keys, fallback copy, validation text, metadata, accessibility labels, truncation, overlap, and horizontal overflow. Check another locale only when its translated resource already exists or is explicitly in scope.
+8. Load `zh-CN`; check raw keys, fallback copy, validation text, metadata, accessibility labels, truncation, overlap, and horizontal overflow. For a source-only namespace, also load at least one supported non-`zh` locale and prove fallback copy renders without raw keys. Otherwise, check another locale only when its translated resource already exists or is explicitly in scope.
 9. Capture desktop and applicable mobile evidence. If Figma has one viewport, use it exactly and add one repository-breakpoint smoke check, clearly labeling that responsive expectation as repository-derived.
 10. Re-run each affected step after a fix.
 
