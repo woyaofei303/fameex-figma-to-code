@@ -35,6 +35,98 @@ def run_audit(
 
 
 class AuditReuseTest(unittest.TestCase):
+    def test_unavailable_icon_catalog_omits_availability(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo_root = Path(directory)
+            fixture = repo_root / 'src/icon.tsx'
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text('<i className="icon-[fx--search]" />\n')
+
+            missing_result = run_audit(repo_root, fixture)
+
+            self.assertEqual(
+                missing_result.returncode,
+                0,
+                missing_result.stderr or missing_result.stdout,
+            )
+            missing_icon = json.loads(missing_result.stdout)['candidates'][0]
+            self.assertNotIn('available', missing_icon)
+
+            icon_list = repo_root / 'packages/icon/output/icon-list.json'
+            icon_list.parent.mkdir(parents=True)
+            icon_list.write_text('{malformed')
+
+            malformed_result = run_audit(repo_root, fixture)
+
+            self.assertEqual(
+                malformed_result.returncode,
+                0,
+                malformed_result.stderr or malformed_result.stdout,
+            )
+            malformed_icon = json.loads(malformed_result.stdout)['candidates'][0]
+            self.assertNotIn('available', malformed_icon)
+
+    def test_rejects_repo_root_that_is_not_an_existing_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            fixture = parent / 'page.tsx'
+            fixture.write_text('<button />\n')
+            missing_repo = parent / 'missing-repo'
+
+            result = run_audit(missing_repo, fixture)
+
+            self.assertEqual(result.returncode, 2)
+            self.assertIn('repo root is not an existing directory', result.stderr)
+
+    def test_long_line_excerpt_is_centered_on_the_candidate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo_root = Path(directory)
+            fixture = repo_root / 'src/long-line.tsx'
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text(
+                'const padding = "{}"; const fixture = \'{}icon-[fx--search]\'\n'.format(
+                    'x' * 280,
+                    'nearby-' * 3,
+                ),
+            )
+
+            result = run_audit(repo_root, fixture)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            source = json.loads(result.stdout)['candidates'][0]['source']
+            self.assertIn('icon-[fx--search]', source)
+            self.assertIn("const fixture = '", source)
+            self.assertTrue(source.startswith('...'))
+            self.assertLessEqual(len(source), 240)
+
+    def test_multiline_component_import_points_to_package_literal_line(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo_root = Path(directory)
+            fixture = repo_root / 'src/multiline.tsx'
+            fixture.parent.mkdir(parents=True)
+            fixture.write_text(
+                """import { Button }
+from
+'@fameex/ui'
+""",
+            )
+
+            result = run_audit(repo_root, fixture)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(
+                json.loads(result.stdout)['candidates'],
+                [
+                    {
+                        'kind': 'component-import',
+                        'name': '@fameex/ui',
+                        'file': 'src/multiline.tsx',
+                        'line': 3,
+                        'source': "'@fameex/ui'",
+                    }
+                ],
+            )
+
     def test_file_target_reports_line_candidates_and_icon_availability(self):
         with tempfile.TemporaryDirectory() as directory:
             repo_root = Path(directory)

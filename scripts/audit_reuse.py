@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import re
 import sys
-from typing import Dict, List, Sequence, Set, Tuple
+from typing import Dict, List, Optional, Sequence, Set, Tuple
 
 
 SOURCE_EXTENSIONS = {'.ts', '.tsx', '.js', '.jsx', '.vue'}
@@ -70,19 +70,19 @@ def source_files(targets: Sequence[Path]) -> List[Path]:
     return sorted(files)
 
 
-def load_available_icons(repo_root: Path) -> Set[str]:
+def load_available_icons(repo_root: Path) -> Optional[Set[str]]:
     icon_list = repo_root / 'packages/icon/output/icon-list.json'
     if not icon_list.is_file():
-        return set()
+        return None
     try:
         payload = json.loads(icon_list.read_text(encoding='utf-8'))
     except (OSError, json.JSONDecodeError):
-        return set()
+        return None
     if isinstance(payload, list):
         return {item for item in payload if isinstance(item, str)}
     if isinstance(payload, dict):
         return {item for item in payload if isinstance(item, str)}
-    return set()
+    return None
 
 
 def display_path(path: Path, repo_root: Path) -> str:
@@ -92,11 +92,53 @@ def display_path(path: Path, repo_root: Path) -> str:
         return str(path)
 
 
-def compact_source(line: str) -> str:
-    source = line.strip()
-    if len(source) <= MAX_SOURCE_LENGTH:
-        return source
-    return source[: MAX_SOURCE_LENGTH - 3] + '...'
+def compact_source(line: str, match_start: int, match_end: int) -> str:
+    if len(line) <= MAX_SOURCE_LENGTH:
+        return line.strip()
+
+    window_size = MAX_SOURCE_LENGTH - 6
+    match_length = match_end - match_start
+    left_context = max(40, (window_size - match_length) // 2)
+    start = max(0, match_start - left_context)
+    end = min(len(line), start + window_size)
+    if end < match_end:
+        end = match_end
+        start = max(0, end - window_size)
+
+    prefix = '...' if start > 0 else ''
+    suffix = '...' if end < len(line) else ''
+    return prefix + line[start:end].strip() + suffix
+
+
+def component_import_candidates(
+    path: Path,
+    repo_root: Path,
+    content: str,
+) -> Dict[int, List[Dict[str, object]]]:
+    candidates: Dict[int, List[Dict[str, object]]] = {}
+    file_name = display_path(path, repo_root)
+    for match in COMPONENT_IMPORT_PATTERN.finditer(content):
+        package_start = match.start('name')
+        line_number = content.count('\n', 0, package_start) + 1
+        line_start = content.rfind('\n', 0, package_start) + 1
+        line_end = content.find('\n', package_start)
+        if line_end == -1:
+            line_end = len(content)
+        line = content[line_start:line_end]
+        column = package_start - line_start
+        candidate = {
+            'kind': 'component-import',
+            'name': match.group('name'),
+            'file': file_name,
+            'line': line_number,
+            'source': compact_source(
+                line,
+                column,
+                column + len(match.group('name')),
+            ),
+        }
+        candidates.setdefault(line_number, []).append(candidate)
+    return candidates
 
 
 def line_candidates(
@@ -104,14 +146,14 @@ def line_candidates(
     repo_root: Path,
     line_number: int,
     line: str,
-    available_icons: Set[str],
+    available_icons: Optional[Set[str]],
 ) -> List[Dict[str, object]]:
     file_name = display_path(path, repo_root)
-    source = compact_source(line)
     matches: List[Tuple[int, int, Dict[str, object]]] = []
 
     def add_candidate(
         column: int,
+        end_column: int,
         order: int,
         kind: str,
         name: str,
@@ -122,26 +164,31 @@ def line_candidates(
             'name': name,
             'file': file_name,
             'line': line_number,
-            'source': source,
+            'source': compact_source(line, column, end_column),
         }
         if available is not None:
             candidate['available'] = available
         matches.append((column, order, candidate))
 
-    for match in COMPONENT_IMPORT_PATTERN.finditer(line):
-        add_candidate(match.start(), 0, 'component-import', match.group('name'))
     for match in NATIVE_CONTROL_PATTERN.finditer(line):
-        add_candidate(match.start(), 1, 'native-control', match.group('name'))
+        add_candidate(
+            match.start(),
+            match.end(),
+            1,
+            'native-control',
+            match.group('name'),
+        )
     for match in IMAGE_PATTERN.finditer(line):
-        add_candidate(match.start(), 2, 'image', 'img')
+        add_candidate(match.start(), match.end(), 2, 'image', 'img')
     for match in ICON_PATTERN.finditer(line):
         icon = match.group(0)
         add_candidate(
             match.start(),
+            match.end(),
             3,
             'icon-literal',
             icon,
-            icon in available_icons,
+            None if available_icons is None else icon in available_icons,
         )
     return [item[2] for item in sorted(matches, key=lambda item: item[:2])]
 
@@ -151,7 +198,9 @@ def audit(repo_root: Path, targets: Sequence[Path]) -> List[Dict[str, object]]:
     candidates: List[Dict[str, object]] = []
     for path in source_files(targets):
         content = path.read_text(encoding='utf-8', errors='ignore')
+        imports_by_line = component_import_candidates(path, repo_root, content)
         for line_number, line in enumerate(content.splitlines(), start=1):
+            candidates.extend(imports_by_line.get(line_number, []))
             candidates.extend(
                 line_candidates(
                     path,
@@ -206,6 +255,12 @@ def print_plain(payload: Dict[str, object]) -> None:
 def main() -> int:
     args = parse_args()
     repo_root = args.repo_root.expanduser().resolve()
+    if not repo_root.is_dir():
+        print(
+            'repo root is not an existing directory: {}'.format(repo_root),
+            file=sys.stderr,
+        )
+        return 2
     try:
         candidates = audit(repo_root, args.targets)
     except ValueError as error:
