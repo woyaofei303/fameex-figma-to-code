@@ -23,6 +23,7 @@ SIMPLE_ESCAPES = {
     "'": "'",
     '"': '"',
     '\\': '\\',
+    '/': '/',
     'n': '\n',
     'r': '\r',
     't': '\t',
@@ -173,6 +174,90 @@ def translation_call_starts(content: str) -> List[int]:
     starts: List[int] = []
     state = 'normal'
     escaped = False
+    interpolation_depths: List[int] = []
+    last_significant = ''
+    index = 0
+    while index < len(content):
+        character = content[index]
+        next_character = content[index + 1] if index + 1 < len(content) else ''
+        if state in {'single', 'double'}:
+            if escaped:
+                escaped = False
+            elif character == '\\':
+                escaped = True
+            elif (
+                (state == 'single' and character == "'")
+                or (state == 'double' and character == '"')
+            ):
+                state = 'normal'
+        elif state == 'template':
+            if escaped:
+                escaped = False
+            elif character == '\\':
+                escaped = True
+            elif character == '`':
+                state = 'normal'
+                last_significant = '`'
+            elif character == '$' and next_character == '{':
+                interpolation_depths.append(1)
+                state = 'normal'
+                last_significant = '{'
+                index += 1
+        elif state == 'line-comment':
+            if character in '\r\n':
+                state = 'normal'
+        elif state == 'block-comment':
+            if character == '*' and next_character == '/':
+                state = 'normal'
+                index += 1
+        elif character == '/' and next_character == '/':
+            state = 'line-comment'
+            index += 1
+        elif character == '/' and next_character == '*':
+            state = 'block-comment'
+            index += 1
+        elif character == "'":
+            state = 'single'
+            last_significant = "'"
+        elif character == '"':
+            state = 'double'
+            last_significant = '"'
+        elif character == '`':
+            state = 'template'
+            last_significant = '`'
+        elif interpolation_depths and character == '{':
+            interpolation_depths[-1] += 1
+            last_significant = character
+        elif interpolation_depths and character == '}':
+            interpolation_depths[-1] -= 1
+            last_significant = character
+            if interpolation_depths[-1] == 0:
+                interpolation_depths.pop()
+                state = 'template'
+        elif character == 't':
+            previous = content[index - 1] if index else ''
+            cursor = index + 1
+            while cursor < len(content) and content[cursor].isspace():
+                cursor += 1
+            if (
+                previous != '.'
+                and not is_identifier_character(previous)
+                and last_significant != '.'
+                and cursor < len(content)
+                and content[cursor] == '('
+            ):
+                starts.append(cursor + 1)
+            last_significant = character
+        elif not character.isspace():
+            last_significant = character
+        index += 1
+    return starts
+
+
+def strip_comments(content: str) -> str:
+    stripped = list(content)
+    state = 'normal'
+    escaped = False
     index = 0
     while index < len(content):
         character = content[index]
@@ -191,14 +276,24 @@ def translation_call_starts(content: str) -> List[int]:
         elif state == 'line-comment':
             if character in '\r\n':
                 state = 'normal'
+            else:
+                stripped[index] = ' '
         elif state == 'block-comment':
             if character == '*' and next_character == '/':
+                stripped[index] = ' '
+                stripped[index + 1] = ' '
                 state = 'normal'
                 index += 1
+            elif character not in '\r\n':
+                stripped[index] = ' '
         elif character == '/' and next_character == '/':
+            stripped[index] = ' '
+            stripped[index + 1] = ' '
             state = 'line-comment'
             index += 1
         elif character == '/' and next_character == '*':
+            stripped[index] = ' '
+            stripped[index + 1] = ' '
             state = 'block-comment'
             index += 1
         elif character == "'":
@@ -207,20 +302,8 @@ def translation_call_starts(content: str) -> List[int]:
             state = 'double'
         elif character == '`':
             state = 'template'
-        elif character == 't':
-            previous = content[index - 1] if index else ''
-            cursor = index + 1
-            while cursor < len(content) and content[cursor].isspace():
-                cursor += 1
-            if (
-                previous != '.'
-                and not is_identifier_character(previous)
-                and cursor < len(content)
-                and content[cursor] == '('
-            ):
-                starts.append(cursor + 1)
         index += 1
-    return starts
+    return ''.join(stripped)
 
 
 def decode_hex_escape(
@@ -304,6 +387,7 @@ def literal_value(literal: str) -> str:
 
 
 def keys_from_argument(argument: str) -> Set[str]:
+    argument = strip_comments(argument)
     literal_match = LITERAL_PATTERN.fullmatch(argument)
     if literal_match:
         return {literal_value(literal_match.group(1))}

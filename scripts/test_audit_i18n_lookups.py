@@ -155,6 +155,80 @@ t('real')
             self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
             self.assertEqual(json.loads(result.stdout)['referenced_count'], 1)
 
+    def test_template_interpolation_scans_code_but_not_raw_template_text(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            namespace = self.write_namespace(root, {'real': 'Real'})
+            source = root / 'template.tsx'
+            source.write_text(
+                '''const value = `raw t('raw-ghost') ${(() => {
+  const closing = '}'
+  /* } */
+  return t('real')
+})()} tail t('tail-ghost')`
+''',
+                encoding='utf-8',
+            )
+
+            result = run_audit(namespace, source)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(json.loads(result.stdout)['referenced_count'], 1)
+
+    def test_member_calls_remain_excluded_across_whitespace_and_comments(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            namespace = self.write_namespace(root, {'real': 'Real'})
+            source = root / 'members.ts'
+            source.write_text(
+                '''object. t('member-space')
+object./* comment */t('member-comment')
+object?. t('optional-member-space')
+return t('real')
+''',
+                encoding='utf-8',
+            )
+
+            result = run_audit(namespace, source)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(json.loads(result.stdout)['referenced_count'], 1)
+
+    def test_static_lookups_allow_leading_and_trailing_comments(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            namespace = self.write_namespace(
+                root,
+                {'key': 'Key', 'enabled': 'Enabled', 'disabled': 'Disabled'},
+            )
+            source = root / 'comments.ts'
+            source.write_text(
+                '''t(/* note, ) */ 'key' /* note */)
+t(
+  // leading
+  enabled ? 'enabled' : 'disabled' // trailing
+)
+''',
+                encoding='utf-8',
+            )
+
+            result = run_audit(namespace, source)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(json.loads(result.stdout)['referenced_count'], 3)
+
+    def test_decodes_javascript_escaped_slash(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            namespace = self.write_namespace(root, {'path/name': 'Path'})
+            source = root / 'slash.ts'
+            source.write_text("t('path\\/name')\n", encoding='utf-8')
+
+            result = run_audit(namespace, source)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(json.loads(result.stdout)['referenced_count'], 1)
+
     def test_decodes_javascript_unicode_code_point_escape(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
