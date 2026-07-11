@@ -49,7 +49,8 @@ Code Connect is optional. Use mappings when the authenticated plan and published
 5. Verify Figma Remote MCP authentication.
 6. Resolve or bootstrap all required sub-skills.
 7. Verify `npx` and either the Playwright wrapper or direct-CLI fallback before promising browser validation.
-8. Resolve the owning app, existing route, and feature surface.
+8. Resolve the owning app, existing route, route-group shell, and feature surface.
+9. For customer Web pages, choose the page namespace and confirm the repository's translation handoff boundary before implementation.
 
 Stop before implementation when the URL lacks a usable node ID, MCP authentication cannot be restored, or the target surface remains ambiguous.
 
@@ -73,13 +74,15 @@ Build a working design manifest containing:
 - Images, SVGs, and icons.
 - Visible hover, active, disabled, loading, empty, error, and modal states.
 - Copy and annotations.
+- Locale namespace, Simplified Chinese source coverage, translation handoff, and copy that must remain backend-provided.
+- Authentication assumptions, user-derived values, and navigation targets.
 - Business behavior the design does not establish.
 
 ### 3. Map the Real Repository
 
 Read [references/fameex-web.md](references/fameex-web.md) before choosing files or components.
 
-Inspect the existing route, adjacent feature code, API hooks, schemas, stores, localization, tests, and responsive patterns. Search shared packages and page-local components before creating anything.
+Inspect the existing route, route-group layout, adjacent feature code, API hooks, schemas, stores, localization, metadata, forced-theme rules, tests, and responsive patterns. Search shared packages and page-local components before creating anything.
 
 Use this precedence:
 
@@ -104,6 +107,10 @@ Implementation rules:
 - Treat MCP React/Tailwind as design representation, not repository-ready code.
 - Use Figma-provided assets; do not add icon packages or placeholders.
 - Keep the patch page-local unless the behavior is genuinely shared.
+- For customer-facing `apps/web` pages, route all visible UI copy, validation feedback, empty states, snackbar text, accessibility labels, and metadata through the repository i18n APIs. Keep pure validation logic language-neutral.
+- Add or update only the Simplified Chinese locale resource by default. Do not generate other-language translations; FameEX translation staff owns them unless the user explicitly expands the locale scope.
+- Verify every navigation target exists in the current branch; report a confirmed dependency instead of silently linking to a branch-only route.
+- Do not hardcode authentication, eligibility, account level, or user-derived values as production behavior when only a Figma state establishes them.
 - Add focused tests for new pure logic or confirmed interaction behavior.
 - Keep unconfirmed business behavior out of the implementation.
 
@@ -117,9 +124,10 @@ Read [references/verification-contract.md](references/verification-contract.md),
 4. Validate the main structure at the Figma frame dimensions.
 5. Exercise only interactions established by Figma, the PRD, backend contract, or existing product behavior.
 6. Re-snapshot after navigation, modal/menu changes, or substantial DOM updates.
-7. Capture desktop, mobile, and failure screenshots under the required artifact directory.
-8. Map each failure to likely files or components before changing code.
-9. Repeat implementation and validation until introduced failures are resolved or a real blocker is documented.
+7. For localized customer pages, test `zh-CN`. Test other locales only when their translated resources already exist or the user explicitly includes them in scope.
+8. Capture desktop, mobile, and failure screenshots under the required artifact directory.
+9. Map each failure to likely files or components before changing code.
+10. Repeat implementation and validation until introduced failures are resolved or a real blocker is documented.
 
 Do not finish after code generation. The browser loop is part of the deliverable.
 

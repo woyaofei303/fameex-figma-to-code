@@ -26,13 +26,18 @@ Keep all generated runtime artifacts under `output-tdd/`. Do not create another 
 3. Take a snapshot before referencing elements.
 4. Check page shell, section order, visible copy, assets, and overflow.
 5. Check spacing, alignment, sizing, typography, colors, borders, radii, and clipping against the Figma screenshot.
-6. Exercise confirmed buttons, tabs, menus, forms, and modals.
-7. Re-snapshot after navigation or material DOM changes.
-8. Capture desktop and applicable mobile screenshots.
-9. Inspect console or interaction errors when the workflow exposes them.
-10. Re-run the affected step after each fix.
+6. Confirm images render with non-zero natural dimensions and inspect unexpectedly large asset payloads.
+7. Exercise confirmed buttons, tabs, menus, forms, and modals.
+8. Verify every exercised link resolves in the current branch or record the destination as an unresolved dependency.
+9. Re-snapshot after navigation or material DOM changes.
+10. For localized customer pages, load `zh-CN` and check for raw translation keys, fallback copy, truncation, overlap, and horizontal overflow. Check additional locales only when their resources already exist or are explicitly in scope.
+11. Capture desktop and applicable mobile screenshots.
+12. Inspect console or interaction errors when the workflow exposes them.
+13. Re-run the affected step after each fix.
 
 If Figma provides only one viewport, validate that viewport exactly. Use existing project breakpoints for an additional responsive smoke check and report that the responsive expectation came from repository behavior rather than a missing Figma frame.
+
+When Figma shows a logged-in or eligible account but local validation runs in a different account state, state the difference. Do not treat sample profile values or unlocked status as validated backend behavior.
 
 ## Interaction Boundary
 
@@ -88,6 +93,8 @@ Report the exact command or browser step and result for:
 - Biome on touched files.
 - Owning-package typecheck.
 - Focused tests when relevant.
+- Simplified Chinese locale JSON validity and code-to-resource lookup coverage; include parity checks only for translated locale files already present or explicitly in scope.
+- Localized metadata and `zh-CN` browser checks; include additional locale evidence only when those translations are in scope.
 - `git diff --check`.
 - Playwright desktop.
 - Playwright mobile when applicable.
@@ -123,6 +130,8 @@ Before claiming completion, verify that:
 - Structured Figma context and screenshot were fetched before implementation.
 - The real repository was mapped before new components were created.
 - No business behavior was guessed.
+- Customer-facing copy, validation, accessibility labels, and metadata use i18n; Simplified Chinese source keys are complete and other-language files were not generated unless explicitly requested.
+- Current-branch navigation targets and account-state assumptions were checked or explicitly reported as dependencies.
 - Browser evidence exists or the concrete browser blocker is reported.
 - Every changed file is listed.
 - Fresh validation output supports every pass claim.
