@@ -82,6 +82,22 @@ For customer Web, frontend-owned copy and Simplified Chinese source coverage are
 - Never add other-locale files solely to suppress a raw key.
 - Check other-locale parity only when those translated resources already exist or are explicitly in scope; never create files solely for parity.
 
+For touched-scope lookup coverage, compare callsites with the Simplified Chinese
+namespace leaves before completion:
+
+```bash
+/usr/bin/python3 <skill-root>/scripts/audit_i18n_lookups.py \
+  --namespace-json /absolute/path/to/zh-CN/namespace.json \
+  --source /absolute/path/to/page.tsx \
+  --source /absolute/path/to/feature-directory \
+  --key explicit.dynamic.expansion \
+  --json
+```
+
+Repeat `--source` for each bounded file or directory. Template and computed
+lookups are not inferred; provide every exact expansion with repeatable `--key`.
+This audit does not change the source-only namespace or fallback rules above.
+
 ## Route, Shell, Theme, and Account State
 
 Confirm route group, layouts, Header/Footer, navigation, sidebar, breakpoints, and forced-theme behavior. Resolve links against the current branch. Report branch-only destinations as dependencies. Treat Figma profile, eligibility, balance, and status values as samples until existing hooks or contracts establish them; record missing states instead of inventing fallbacks. Use the page's canonical pathname for localized metadata.
