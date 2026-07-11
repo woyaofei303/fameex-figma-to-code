@@ -1,163 +1,79 @@
 ---
 name: fameex-figma-to-code
-description: Use when implementing or reproducing an interface in the FameEX web repository from a Figma design URL, exact frame link, or node-id, especially when the result must reuse existing code and finish with browser validation.
+description: Use when implementing or reproducing a FameEX frontend interface from a Figma Design URL, exact frame link, or node-id, especially when the work must fit an existing route, component system, localization model, and browser-verified workflow.
 ---
 
 # FameEX Figma to Code
 
-Turn an exact Figma node into a scoped FameEX implementation with design evidence, repository mapping, real-browser validation, and an evidence-based completion report.
+Implement the exact Figma node in its owning FameEX app. Preserve repository behavior, reuse the correct design system, and support completion claims with fresh evidence.
 
-## Input Contract
+## Input and Preflight Gates
 
-Require a Figma Design URL containing `node-id`. Accept an optional target route or component path.
+Require a Figma Design URL with `node-id`; accept an optional route or component path. When no target is supplied, continue only if repository evidence identifies one surface unambiguously. Never create a parallel route for an existing page.
 
-When the target is omitted, search the repository and continue only when one existing surface is unambiguous. Ask one blocking question when multiple materially different targets remain. Do not create a parallel route when the selected design belongs to an existing page.
+Before editing, record:
 
-## Dependency Bootstrap
+- Repository absolute path, Git worktree path, current branch, and dirty state.
+- Owning app, target route, and feature surface.
+- Skill source Git repo (`/Users/julian/fameex-figma-to-code`) versus installed runtime skill (`/Users/julian/.codex/skills/fameex-figma-to-code`) when skill maintenance is in scope.
 
-Read [references/dependency-bootstrap.md](references/dependency-bootstrap.md) before loading any required sub-skill.
+Preserve unrelated changes. Stop on an invalid node ID, unrecoverable Figma authentication, ambiguous target, unsafe overlap, or required destructive/external behavior whose contract is unknown.
 
-For each required capability:
-
-1. Resolve it from the current available-skills catalog, personal skills, system skills, or plugin skills.
-2. If absent and an exact curated or GitHub source is known, use `skill-installer`.
-3. If installation is unavailable or fails, run the bundled dependency bootstrap for that capability.
-4. Validate the installed or created `SKILL.md` and its capability prerequisite.
-5. Read the new `SKILL.md` directly and resume the original phase in the same turn.
-
-Never overwrite an existing skill directory. Stop and report an invalid existing directory instead of replacing user content. Track dependencies installed or created during the task and include them in the final response.
+Read [references/dependency-bootstrap.md](references/dependency-bootstrap.md) before resolving missing skills. Never overwrite an existing skill directory.
 
 ## Required Sub-Skills
 
-Load each skill only when its phase begins:
+Load only when its phase begins:
 
-- **REQUIRED:** Use `figma` for design context, screenshots, variables, and assets.
-- **REQUIRED:** Use `figma-implement-design` before writing UI code.
-- **REQUIRED:** Use `playwright` for terminal-driven browser validation.
-- **REQUIRED:** Use `superpowers:verification-before-completion` or the local `verification-before-completion` fallback before any completion claim.
+- **REQUIRED:** `figma` for structured context, screenshot, variables, and assets.
+- **REQUIRED:** `figma-implement-design` before UI edits.
+- **REQUIRED:** `playwright` for browser validation.
+- **REQUIRED:** `superpowers:verification-before-completion`, or the bundled fallback, before completion claims.
 
-Code Connect is optional. Use mappings when the authenticated plan and published Figma components support them. Record and skip entitlement failures without blocking the remaining workflow.
+Code Connect is optional. Record entitlement failures and continue.
 
-## Workflow
+## Seven Phases
 
-### 1. Preflight and Scope Lock
+### 1. Lock Scope
 
-1. Confirm the current directory is `/Users/julian/fameex-web` or one of its Git worktrees.
-2. Inspect the current branch and `git status --short`.
-3. Preserve unrelated user changes. If required files overlap existing changes and cannot be edited safely, stop and report the overlap.
-4. Parse the Figma `fileKey` and exact `nodeId`.
-5. Verify Figma Remote MCP authentication.
-6. Resolve or bootstrap all required sub-skills.
-7. Verify `npx` and either the Playwright wrapper or direct-CLI fallback before promising browser validation.
-8. Resolve the owning app, existing route, route-group shell, and feature surface.
-9. For customer Web pages, choose the page namespace and confirm the repository's translation handoff boundary before implementation.
-
-Stop before implementation when the URL lacks a usable node ID, MCP authentication cannot be restored, or the target surface remains ambiguous.
+Parse the exact `fileKey` and `nodeId`; verify Figma access, required skills, browser tooling, owning app, existing route, shell, and locale namespace. Record the preflight environment above.
 
 ### 2. Collect Design Evidence
 
-Follow the `figma` workflow in this order:
+Fetch `get_design_context` and `get_screenshot` for the same node before coding. If context is truncated, use metadata to fetch only required children. Fetch variables, mappings, and original assets when relevant.
 
-1. Call `get_design_context` for the exact node.
-2. If the response is too large or truncated, call `get_metadata`, identify the required section or variant nodes, and call `get_design_context` for those children.
-3. Call `get_screenshot` for the same node or exact variant.
-4. Fetch variables, Code Connect mappings, and assets when present.
+Create a design manifest for hierarchy, responsive constraints, tokens, copy, assets, states, navigation, account assumptions, and unknown business behavior. Classify every control and asset as `reuse`, `adapt`, `promote`, or `local`; add a short reason for every non-`reuse` decision.
 
-Do not write implementation code until both structured design context and a visual screenshot are available.
+### 3. Map the Repository
 
-Build a working design manifest containing:
+Read [references/fameex-web.md](references/fameex-web.md). Inspect the route, shell, adjacent feature, services, stores, i18n, tests, and responsive conventions. Run the bounded candidate audit once, then judge each result in context:
 
-- Page hierarchy and section boundaries.
-- Layout, constraints, dimensions, overflow, and responsive intent.
-- Reusable component candidates.
-- Typography, colors, spacing, radii, and design variables.
-- Images, SVGs, and icons.
-- Visible hover, active, disabled, loading, empty, error, and modal states.
-- Copy and annotations.
-- Locale namespace, Simplified Chinese source coverage, translation handoff, and copy that must remain backend-provided.
-- Authentication assumptions, user-derived values, and navigation targets.
-- Business behavior the design does not establish.
-
-### 3. Map the Real Repository
-
-Read [references/fameex-web.md](references/fameex-web.md) before choosing files or components.
-
-Inspect the existing route, route-group layout, adjacent feature code, API hooks, schemas, stores, localization, metadata, forced-theme rules, tests, and responsive patterns. Search shared packages and page-local components before creating anything.
-
-Use this precedence:
-
-```text
-Backend contract or PRD -> business behavior
-Figma -> layout, copy, visual state, and interaction intent
-Repository conventions -> implementation structure
+```bash
+/usr/bin/python3 scripts/audit_reuse.py --repo-root <repo> <target-paths...>
 ```
 
-Do not infer endpoints, payload fields, enum meanings, permissions, submission effects, navigation, or fallback data from Figma. Implement confirmed visual behavior and report unresolved business behavior as pending; do not hide it in speculative code.
+Use this authority order: backend contract or PRD for business behavior; Figma for visual and interaction intent; repository conventions for implementation structure. Do not infer APIs, permissions, enums, submission effects, or fallback data from Figma.
 
-### 4. Plan and Implement Incrementally
+### 4. Implement in Slices
 
-Load `figma-implement-design` before editing UI code.
+Load `figma-implement-design`. For large frames, implement independently verifiable slices. Follow the component and asset decision model in `references/fameex-web.md`; prefer the owning app's component system and use original Figma assets when no suitable shared icon exists.
 
-For a large frame, split work into independently verifiable visual slices. Each slice has scope, files, acceptance criteria, dependencies, validation method, and status. Complete one slice and verify it before advancing.
+Route frontend-owned visible copy, validation, accessibility labels, and metadata through i18n. Add or modify only Simplified Chinese (`zh-CN`/`zh_CN`) resources by default. Never create translations or Chinese placeholders in other locales; translation staff owns them unless the user explicitly expands scope.
 
-Implementation rules:
+Keep unconfirmed business behavior out of production code. Add focused tests for confirmed logic or interactions.
 
-- Adapt the existing page when possible.
-- Reuse project components, hooks, tokens, icons, API wrappers, and state patterns.
-- Treat MCP React/Tailwind as design representation, not repository-ready code.
-- Use Figma-provided assets; do not add icon packages or placeholders.
-- Keep the patch page-local unless the behavior is genuinely shared.
-- For customer-facing `apps/web` pages, route all visible UI copy, validation feedback, empty states, snackbar text, accessibility labels, and metadata through the repository i18n APIs. Keep pure validation logic language-neutral.
-- Add or update only the Simplified Chinese locale resource by default. Do not generate other-language translations; FameEX translation staff owns them unless the user explicitly expands the locale scope.
-- Verify every navigation target exists in the current branch; report a confirmed dependency instead of silently linking to a branch-only route.
-- Do not hardcode authentication, eligibility, account level, or user-derived values as production behavior when only a Figma state establishes them.
-- Add focused tests for new pure logic or confirmed interaction behavior.
-- Keep unconfirmed business behavior out of the implementation.
+### 5. Validate in a Browser
 
-### 5. Run the Browser Validation Loop
-
-Read [references/verification-contract.md](references/verification-contract.md), then load `playwright` and follow its CLI-first workflow.
-
-1. Start only the owning app when a server is not already available.
-2. Open the target local URL.
-3. Take a fresh Playwright snapshot before using element references.
-4. Validate the main structure at the Figma frame dimensions.
-5. Exercise only interactions established by Figma, the PRD, backend contract, or existing product behavior.
-6. Re-snapshot after navigation, modal/menu changes, or substantial DOM updates.
-7. For localized customer pages, test `zh-CN`. Test other locales only when their translated resources already exist or the user explicitly includes them in scope.
-8. Capture desktop, mobile, and failure screenshots under the required artifact directory.
-9. Map each failure to likely files or components before changing code.
-10. Repeat implementation and validation until introduced failures are resolved or a real blocker is documented.
-
-Do not finish after code generation. The browser loop is part of the deliverable.
+Read [references/verification-contract.md](references/verification-contract.md), load `playwright`, and follow its single browser checklist. Validate `zh-CN`, the exact Figma viewport, applicable responsive behavior, confirmed interactions, assets, navigation, console output, and account-state differences. Store review artifacts under `output-tdd/`.
 
 ### 6. Validate the Touched Scope
 
-Run the project checks from `references/fameex-web.md`. Classify every failure as introduced, pre-existing, or environmental. Do not broaden the patch solely to clean unrelated baseline failures.
+Run owning-app formatting, focused tests, typecheck, locale-path checks, and `git diff --check` as specified in `references/fameex-web.md`. Classify failures as introduced, pre-existing, or environmental; do not expand scope to fix unrelated baselines.
 
-Inspect the final changed-file list and diff. Run `git diff --check` after formatting and tests.
+### 7. Report Evidence
 
-### 7. Report with Evidence
+Load the verification skill and use the exact final-response contract in `references/verification-contract.md`. Include changed files, commands/results, browser artifacts, reused/promoted/local decisions, dependencies, and unresolved business questions. Never claim parity, passing checks, or completion without fresh current-run evidence.
 
-Load `superpowers:verification-before-completion` or the bootstrapped local fallback, then use the exact final-report contract in `references/verification-contract.md`.
+## Continue Conditions
 
-Never claim 1:1 parity, passing tests, or completion without fresh command or browser evidence from the current run. If a validation layer could not run, name the unavailable layer and its concrete blocker.
-
-## Stop and Continue Rules
-
-Stop before code changes for:
-
-- Missing or invalid Figma node ID.
-- Unrecoverable MCP authentication.
-- Ambiguous target page or component.
-- Unknown destructive or externally visible behavior required for completion.
-- Unsafe overlap with existing user changes.
-- An existing dependency directory is invalid and cannot be safely replaced.
-
-Continue with confirmed scope when:
-
-- Code Connect is unavailable.
-- A required sub-skill is missing but dependency bootstrap can restore it.
-- Repository-wide typecheck has unrelated baseline failures.
-- A nonessential interaction is unspecified.
-- The selected frame must be decomposed into child nodes.
+Continue within confirmed scope when Code Connect is unavailable, a dependency can be bootstrapped, global checks have unrelated baseline failures, a nonessential interaction is unspecified, or a large node must be decomposed. Report the constraint instead of inventing behavior.

@@ -1,8 +1,8 @@
 # Browser Validation and Completion Contract
 
-Load this reference before starting Playwright and again before the final response.
+Load before Playwright and again before the final response. This file is the single browser checklist.
 
-## Artifact Contract
+## Artifacts
 
 Create one task-scoped directory:
 
@@ -10,49 +10,30 @@ Create one task-scoped directory:
 output-tdd/playwright/<task-timestamp>/
 ```
 
-Store only artifacts useful for review:
+Keep only useful review evidence: desktop screenshot at the Figma width, applicable mobile screenshot, failure screenshots named by step, and a trace only when snapshots cannot explain an interaction failure. Keep runtime artifacts under `output-tdd/`; add persistent Playwright tests only for behavior needing regression coverage or when requested.
 
-- Desktop screenshot at the Figma frame width or closest supported viewport.
-- Mobile screenshot when a mobile frame or existing mobile behavior applies.
-- Failure screenshots named for the failed step.
-- Trace output when an interaction failure cannot be explained from a snapshot and screenshot.
+## Browser Checklist
 
-Keep all generated runtime artifacts under `output-tdd/`. Do not create another top-level artifact directory. Do not add persistent Playwright test files unless the user requests them or the change introduces behavior that needs regression coverage.
+1. Confirm the owning app and exact local route are running.
+2. Open the route with the Playwright CLI wrapper and take a fresh snapshot before referencing elements.
+3. At the exact Figma viewport, compare shell, section order, copy, assets, overflow, spacing, alignment, sizing, typography, colors, borders, radii, and clipping with the node screenshot.
+4. Confirm images have non-zero natural dimensions; inspect broken, translucent, cropped, or unexpectedly large assets.
+5. Exercise only interactions established by Figma, PRD/backend contract, existing behavior, or explicit user instruction. Check focus, keyboard, disabled, loading, validation, and feedback states when applicable.
+6. Verify each exercised link in the current branch; otherwise record it as a dependency.
+7. Re-snapshot after navigation or material DOM changes. Inspect console/network errors exposed by the workflow.
+8. Load `zh-CN`; check raw keys, fallback copy, validation text, metadata, accessibility labels, truncation, overlap, and horizontal overflow. Check another locale only when its translated resource already exists or is explicitly in scope.
+9. Capture desktop and applicable mobile evidence. If Figma has one viewport, use it exactly and add one repository-breakpoint smoke check, clearly labeling that responsive expectation as repository-derived.
+10. Re-run each affected step after a fix.
 
-## Browser Validation Sequence
+When local authentication or eligibility differs from the Figma state, state the difference. Never treat sample account values or an unlocked design state as backend validation.
 
-1. Confirm the target local URL and owning app are running.
-2. Open the page with the Playwright CLI wrapper.
-3. Take a snapshot before referencing elements.
-4. Check page shell, section order, visible copy, assets, and overflow.
-5. Check spacing, alignment, sizing, typography, colors, borders, radii, and clipping against the Figma screenshot.
-6. Confirm images render with non-zero natural dimensions and inspect unexpectedly large asset payloads.
-7. Exercise confirmed buttons, tabs, menus, forms, and modals.
-8. Verify every exercised link resolves in the current branch or record the destination as an unresolved dependency.
-9. Re-snapshot after navigation or material DOM changes.
-10. For localized customer pages, load `zh-CN` and check for raw translation keys, fallback copy, truncation, overlap, and horizontal overflow. Check additional locales only when their resources already exist or are explicitly in scope.
-11. Capture desktop and applicable mobile screenshots.
-12. Inspect console or interaction errors when the workflow exposes them.
-13. Re-run the affected step after each fix.
+## Business Boundary
 
-If Figma provides only one viewport, validate that viewport exactly. Use existing project breakpoints for an additional responsive smoke check and report that the responsive expectation came from repository behavior rather than a missing Figma frame.
-
-When Figma shows a logged-in or eligible account but local validation runs in a different account state, state the difference. Do not treat sample profile values or unlocked status as validated backend behavior.
-
-## Interaction Boundary
-
-Exercise behavior only when established by at least one of:
-
-- The selected Figma state or annotation.
-- A PRD or backend contract.
-- Existing behavior on the target page.
-- An explicit user instruction.
-
-Do not invent submissions, redirects, API calls, permission checks, or mock fallbacks. Record unresolved behavior in the final report.
+Do not invent submissions, redirects, API calls, permissions, eligibility, enums, or mock fallbacks. Exercise behavior only when established by selected-node evidence, a PRD/backend contract, existing target behavior, or an explicit instruction. Report unresolved behavior instead of implementing it speculatively.
 
 ## Failure Record
 
-For every unresolved failure, report:
+For each unresolved failure, report:
 
 ```text
 Step: <browser action or visual check>
@@ -64,74 +45,31 @@ Likely code locations:
 Reasoning: <short evidence-based mapping>
 ```
 
-Do not report a vague “visual mismatch” without an artifact and likely code location.
+Do not report a vague mismatch without an artifact and likely code location.
 
 ## Final Response Contract
 
-Return these sections in order.
+Return these sections in order:
 
-### Outcome
-
-State what was implemented and whether browser validation completed. Do not claim parity when it did not run.
-
-### Figma Mapping
-
-List the selected node and its implemented page sections or components.
-
-### Reused Project Code
-
-List reused components, hooks, tokens, icons, services, and state patterns.
-
-### 修改文件
-
-Provide every changed absolute file path in a copyable fenced block.
-
-### Validation
-
-Report the exact command or browser step and result for:
-
-- Biome on touched files.
-- Owning-package typecheck.
-- Focused tests when relevant.
-- Simplified Chinese locale JSON validity and code-to-resource lookup coverage; include parity checks only for translated locale files already present or explicitly in scope.
-- Localized metadata and `zh-CN` browser checks; include additional locale evidence only when those translations are in scope.
-- `git diff --check`.
-- Playwright desktop.
-- Playwright mobile when applicable.
-- Confirmed key interactions.
-
-Classify non-passing results as introduced, pre-existing, or environmental.
-
-### Artifacts
-
-Provide absolute paths to screenshots and traces.
-
-### Failures and Deviations
-
-Use the failure-record shape above. State `None` only when evidence supports it.
-
-### Pending Business Questions
-
-List behavior Figma and repository evidence could not establish. Keep it out of speculative implementation code.
-
-### 查看修改
-
-Provide standalone commands without shell prompts:
-
-```bash
-git status --short
-git diff -- <touched-paths...>
-```
+1. **Outcome** — implemented scope and whether browser validation completed; no parity claim without evidence.
+2. **Figma Mapping** — file/node and implemented sections/components.
+3. **Reuse Decisions** — reused/adapted/promoted/local components and assets, with reasons for non-reuse; list shared hooks, tokens, icons, services, and state patterns.
+4. **修改文件** — every changed absolute path in a copyable fenced block.
+5. **Validation** — exact command/step and result for Biome, owning-app typecheck, focused tests, Simplified Chinese JSON and lookup coverage, localized metadata, `git diff --check`, Playwright desktop/mobile, and confirmed interactions. Include other-locale evidence only when in scope. Classify failures as introduced, pre-existing, or environmental.
+6. **Artifacts** — absolute screenshot/trace paths.
+7. **Failures and Deviations** — failure-record shape; `None` only when evidence supports it.
+8. **Pending Business Questions** — behavior not established by Figma and repository evidence.
+9. **查看修改** — standalone `git status --short` and touched-path `git diff` commands.
 
 ## Completion Gate
 
-Before claiming completion, verify that:
+Before claiming completion, verify:
 
-- Structured Figma context and screenshot were fetched before implementation.
-- The real repository was mapped before new components were created.
-- No business behavior was guessed.
-- Customer-facing copy, validation, accessibility labels, and metadata use i18n; Simplified Chinese source keys are complete and other-language files were not generated unless explicitly requested.
-- Current-branch navigation targets and account-state assumptions were checked or explicitly reported as dependencies.
-- Browser evidence exists or the concrete browser blocker is reported.
-- Every changed file is listed.
-- Fresh validation output supports every pass claim.
+- Structured Figma context and the matching node screenshot preceded implementation.
+- The real route and owning app were mapped; the manifest classified controls/assets as `reuse`, `adapt`, `promote`, or `local`.
+- The owning component system was preferred; any local control has a recorded behavior/complexity reason.
+- Existing icons were checked; a missing icon uses the Figma original or was promoted to `packages/icon` only when semantically reusable.
+- No business behavior was guessed; route targets and account assumptions were validated or reported.
+- Frontend-owned copy, validation, accessibility labels, and metadata use i18n; Simplified Chinese source keys are complete; no other-language files were generated unless explicitly requested.
+- Exact-viewport and responsive evidence exists, or the concrete browser blocker is reported.
+- Every changed file is listed and fresh output supports every pass claim.

@@ -1,117 +1,103 @@
 # FameEX Web Repository Rules
 
-Load this reference during repository mapping and touched-scope validation.
+Load during repository mapping and touched-scope validation.
 
-## Workspace and Ownership
+## Workspace Ownership
 
 - Repository: `/Users/julian/fameex-web`.
-- Customer web: `apps/web`.
-- Next.js admin: `apps/admin`.
-- Futures admin: `apps/futures-admin`.
-- Shared UI: `packages/ui`.
-- Shared icons: `packages/icon`.
-- Shared utilities and hooks: `packages/utils`.
+- Customer Web: `apps/web`; primary components: `@fameex/ui` / `packages/ui`.
+- Next.js Admin: `apps/admin`; Futures Admin: `apps/futures-admin`.
+- Shared icons: `packages/icon`; utilities and hooks: `packages/utils`.
 
-Resolve the owning app from the existing route and neighboring code. Do not assume every Figma frame belongs to `apps/web`.
+Resolve the owning app from the existing route and neighboring code. Admin work must follow that app's established Ant Design, Element, or other existing component system; do not import the customer Web system merely for visual similarity.
 
-## Reuse Order
+## Component and Asset Decision Model
 
-Search in this order before creating code:
+Run the candidate audit command from `SKILL.md` against the target and nearby paths. Its line-addressable output is a bounded discovery aid, not a semantic verdict: inspect comments, strings, fixtures, indirect uses, and omitted results manually.
 
-1. Existing target page and page-local components.
-2. Adjacent feature components, hooks, schemas, and utilities.
-3. `@fameex/ui` and `packages/ui`.
-4. `packages/icon`.
-5. Existing service/API wrappers and React Query hooks.
-6. Existing Zustand stores for local UI state.
+Search in this order:
 
-Extend a matching component when its API supports the design. Do not move a page-local pattern into a shared package unless multiple real consumers require it.
+1. Owning app's component system.
+2. Owning app's shared components and hooks.
+3. Adjacent feature components and patterns.
+4. Page-local implementation.
+
+Search existing service wrappers, React Query hooks, Zustand stores, tokens, and `packages/icon` alongside the UI search. For each control or asset, answer:
+
+1. Does an existing candidate match the required behavior and semantics?
+2. Can supported props, slots, classes, or composition express the visual differences without a fork or fragile override?
+3. Is the concept stable across pages or domains, with credible reuse beyond this frame?
+
+Record one manifest classification:
+
+- `reuse`: existing API and styling satisfy the design.
+- `adapt`: reuse the existing primitive with supported composition or scoped styling.
+- `promote`: add to a shared package because the semantic concept is stable and genuinely cross-page; use it in the same implementation.
+- `local`: keep page/feature-local because behavior is incompatible, adaptation cost is disproportionate, or the asset is page-bound.
+
+Give every non-`reuse` item a short reason. Prefer `adapt` over cloning. Do not promote merely to remove duplication from a single page.
+
+### Controls
+
+Use the owning system's Input, Select, Button, Checkbox, form, and feedback primitives when their behavior fits. Preserve accessibility, validation, loading, disabled, focus, and keyboard contracts. A composed control may remain local when shared primitives cannot supply required search, virtualization, formatting, or domain behavior without high complexity; reuse suitable primitives inside it.
+
+### Icons and Artwork
+
+Before choosing an icon, inspect both:
+
+- `packages/icon/output/icon-list.json`
+- `packages/icon/svg-files/**`
+
+If no existing icon is suitable, use the original Figma icon asset. Do not draw an approximate SVG, substitute an unrelated glyph, or add a third-party icon package.
+
+Choose `promote` when the icon has stable product semantics, a reusable name, and likely cross-page consumers. Add the Figma SVG to the appropriate `packages/icon/svg-files` category, run the package's established generation workflow, verify `output/icon-list.json`, and use the generated global icon class in the same change. Keep one-off decoration, illustrations, banners, badges, gradients, and strongly page-bound art local even when represented as SVG.
 
 ## Implementation Conventions
 
-- Use TypeScript and React function components.
-- Follow nearby naming, styling, import, and file-organization patterns.
-- Use TanStack React Query for server state and request lifecycle concerns.
-- Use Zustand for local client/UI state when the feature already follows that pattern.
-- Treat real payloads, PRDs, backend field comments, and user corrections as authoritative.
-- Trace whether UI copy is backend-returned, localized, or frontend-composed before changing it.
-- Prefer adapting an existing page over creating a new route or parallel flow.
-- Keep page-specific work local unless the user explicitly expands the scope.
-
-## Design and Assets
-
-- Treat Figma React/Tailwind output as an intermediate representation.
-- Reuse project tokens and components while preserving the selected node's visual intent.
-- Do not add icon packages.
-- Use Figma-provided image and SVG sources when available; do not create placeholders.
-- Inspect exported asset dimensions, transparency, rendered pixels, and byte size. If an MCP asset is blank, cropped, or unexpectedly translucent, re-fetch the exact child node or screenshot and verify the rendered result before coding around it.
-- Prefer the repository-supported web format and avoid committing oversized raw design exports when a visually equivalent optimized asset can be produced without changing the design.
-- Validate desktop and mobile independently. Do not derive mobile solely by shrinking desktop dimensions.
+- Use TypeScript and React function components; match nearby naming, styling, imports, and file layout.
+- Use TanStack React Query for server state and Zustand for local UI state when the owning feature does.
+- Treat real payloads, PRDs, backend comments, and user corrections as authoritative.
+- Trace whether copy is backend-returned, localized, or frontend-composed before editing it.
+- Adapt an existing route instead of creating a parallel flow.
+- Keep page-specific work local unless reuse evidence justifies promotion.
+- Treat Figma React/Tailwind output as design representation, not repository-ready code.
+- Use original Figma images/SVGs; verify dimensions, transparency, crop, rendered pixels, and payload size.
+- Validate desktop and mobile independently; do not derive mobile only by shrinking desktop.
 
 ## Localization
 
-For a complete customer-facing `apps/web` page, wiring the interface to i18n and providing the Simplified Chinese source copy are part of implementation. Other-language translation is a separate handoff owned by FameEX translation staff.
+For customer Web, frontend-owned copy and Simplified Chinese source coverage are implementation scope; other languages are a translation-team handoff.
 
-- Reuse the closest existing namespace. Create a page namespace only when no existing namespace owns the copy.
+- Reuse the closest namespace; create one only when no existing namespace owns the copy.
 - Use `useT('<namespace>')` in client components and `getT(lang, '<namespace>')` for server metadata.
-- Localize every visible string owned by the frontend: headings, labels, placeholders, validation feedback, snackbar text, empty/loading/error states, button copy, accessibility labels, and SEO metadata.
-- Keep pure schemas, validators, and normalizers language-neutral. Return error codes or field identities and translate at the rendering boundary.
-- Add or update only `zh-CN` or `zh_CN` locale resources by default. Do not add English copies, machine translations, placeholder translations, or duplicate Simplified Chinese into other locale files.
-- Add other locales only when the user explicitly requests them or supplies translation content. Treat translation-team output as authoritative and preserve its key tree.
-- Keep dotted lookup paths as nested JSON objects. Verify the callsite, namespace filename, and JSON shape together.
-- Trace whether copy is backend-returned, localized, or frontend-composed before changing it. Do not move backend-owned content into locale files without a confirmed contract.
-- Validate the Simplified Chinese JSON paths with a deterministic check. If translated resources for the namespace already exist or are explicitly in scope, also check their key parity and long-copy layout; do not create translations merely to satisfy parity.
-- Browser-check `zh-CN` at desktop and mobile widths when responsive behavior applies. Check additional locales only when their resources already exist or the user explicitly includes them.
-- Keep page-local locale work page-local. Do not change the global Header language selector unless the user explicitly requests it.
+- Localize headings, labels, placeholders, validation, feedback, states, buttons, accessibility labels, and metadata.
+- Keep validators and normalizers language-neutral; translate their codes at the rendering boundary.
+- Add or update only `zh-CN` / `zh_CN` resources by default. Never generate English, machine translations, placeholders, or copied Chinese in other locales.
+- Add another locale only when explicitly requested or supplied; preserve translation-team content and key shape.
+- Keep dotted lookups as nested JSON and verify callsite, namespace filename, and JSON path together.
+- Do not localize backend-owned content without a confirmed contract.
+- Check other-locale parity only when those translated resources already exist or are explicitly in scope; never create files solely for parity.
 
 ## Route, Shell, Theme, and Account State
 
-- Confirm the target route, route group, layouts, Header/Footer inclusion, mobile navigation, and any page-local sidebar before implementation.
-- Check forced-theme hooks and shell styling so a dark Figma page does not accidentally alter other routes.
-- Resolve every link and redirect against the current branch. When a destination exists only in a PRD or another branch, report it as a dependency and avoid presenting the navigation as fully validated.
-- Distinguish Figma sample values from real account state. Trace login state, VIP eligibility, profile data, and server-derived status through existing hooks or contracts before wiring them.
-- Validate the available logged-in, logged-out, eligible, ineligible, loading, and error states that are confirmed by Figma, PRD, backend contract, or existing code. Record missing contracts instead of inventing fallbacks.
-- Localize metadata and use the same canonical pathname constant as the page route.
+Confirm route group, layouts, Header/Footer, navigation, sidebar, breakpoints, and forced-theme behavior. Resolve links against the current branch. Report branch-only destinations as dependencies. Treat Figma profile, eligibility, balance, and status values as samples until existing hooks or contracts establish them; record missing states instead of inventing fallbacks. Use the page's canonical pathname for localized metadata.
 
 ## Worktree Safety
 
-- Run `git status --short` before editing.
-- Preserve all unrelated user changes.
-- Prefer `git show <branch>:<path>` for read-only inspection of another branch.
-- Do not switch branches or create a worktree unless required by the user or by overlapping changes.
-- Keep every edit visible and reversible.
+Record `git status --short`; preserve unrelated changes. Prefer `git show <branch>:<path>` for read-only inspection. Do not switch branches or create worktrees without need. Keep edits visible and reversible.
 
-## Validation Commands
+## Touched-Scope Validation
 
-Format or check touched JS, TS, TSX, and JSON files:
+Use the owning package and exact touched files:
 
 ```bash
 pnpm exec biome check --write --no-errors-on-unmatched <touched-files...>
-```
-
-Use the owning package typecheck:
-
-```bash
 pnpm --filter @fameex/web typecheck
 pnpm --filter @fameex/admin typecheck
-```
-
-Run focused Vitest without the Vite cache when relevant:
-
-```bash
 pnpm vitest --run --cache=false <target-tests...>
-```
-
-Always finish touched-scope inspection with:
-
-```bash
 git diff --check
 git status --short
 git diff -- <touched-paths...>
 ```
 
-For a new or expanded locale namespace, assert Simplified Chinese JSON validity and verify every code lookup path exists. When other translated locale files already exist or are in scope, assert parity across those files too. A direct JSON traversal is preferred over depending on runtime i18next resolution for this structural check.
-
-Repository-wide typecheck has known baseline noise. Report whether failures are introduced, pre-existing, or environmental; do not modify unrelated files to make the global command green.
-
-Legacy admin paths may be excluded from normal Biome coverage. For those files, add direct syntax checks and diff inspection appropriate to the language.
+Run only the applicable package typecheck. Validate Simplified Chinese JSON and every lookup path deterministically; include other-locale parity only when already in scope. Report repository-wide baseline noise separately. For excluded legacy-admin files, add direct syntax and diff checks appropriate to the language.
