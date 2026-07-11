@@ -10,11 +10,15 @@ Read merge-base-to-HEAD name/stat output once, then one route slice. Review befo
 
 ## Finding Classes
 
-Use code issue, PR-specific dependency, reusable Skill gap, or no action. Record visual, interaction, component reuse, icon/artwork, i18n, accessibility/privacy, and business/route evidence separately.
+Use code issue, PR-specific dependency, reusable Skill gap, or no action. For every finding, record evidence, class, disposition (`keep`, `fix`, or `defer`), reason, and verification status. Retain supported deferred findings. Record visual, interaction, component reuse, icon/artwork, i18n, accessibility/privacy, and business/route evidence separately.
 
 ## Artifacts
 
 Maintain a manifest, one route report per slice, a Skill gap log, and browser evidence paths. Reuse evidence by node ID.
+
+## No-Op and Blocked Evidence
+
+For a no-op, record the inspection scope and evidence supporting no modification. For a blocked audit, record attempted steps, the failed or missing prerequisite, and existing evidence paths; do not record only the conclusion.
 
 ## Stop and Continue Conditions
 
