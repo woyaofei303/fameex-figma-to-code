@@ -15,7 +15,7 @@ Before editing, record:
 
 - Repository absolute path, Git worktree path, current branch, and dirty state.
 - Owning app, target route, and feature surface.
-- Skill source Git repo (`/Users/julian/fameex-figma-to-code`) versus installed runtime skill (`/Users/julian/.codex/skills/fameex-figma-to-code`) when skill maintenance is in scope.
+- Loaded skill root, used to resolve bundled scripts and references. When skill maintenance is in scope, distinguish the source Git repo (`/Users/julian/fameex-figma-to-code`) from the installed runtime skill (`/Users/julian/.codex/skills/fameex-figma-to-code`).
 
 Preserve unrelated changes. Stop on an invalid node ID, unrecoverable Figma authentication, ambiguous target, unsafe overlap, or required destructive/external behavior whose contract is unknown.
 
@@ -40,17 +40,19 @@ Parse the exact `fileKey` and `nodeId`; verify Figma access, required skills, br
 
 ### 2. Collect Design Evidence
 
-Fetch `get_design_context` and `get_screenshot` for the same node before coding. If context is truncated, use metadata to fetch only required children. Fetch variables, mappings, and original assets when relevant.
+Load `figma`. Fetch `get_design_context` and `get_screenshot` for the same node before coding. If context is truncated, use metadata to fetch only required children. Fetch variables, mappings, and original assets when relevant.
 
 Create a design manifest for hierarchy, responsive constraints, tokens, copy, assets, states, navigation, account assumptions, and unknown business behavior. Classify every control and asset as `reuse`, `adapt`, `promote`, or `local`; add a short reason for every non-`reuse` decision.
 
 ### 3. Map the Repository
 
-Read [references/fameex-web.md](references/fameex-web.md). Inspect the route, shell, adjacent feature, services, stores, i18n, tests, and responsive conventions. Run the bounded candidate audit once, then judge each result in context:
+Read [references/fameex-web.md](references/fameex-web.md). Inspect the route, shell, adjacent feature, services, stores, i18n, tests, and responsive conventions. Run one initial bounded candidate audit from the loaded skill root:
 
 ```bash
-/usr/bin/python3 scripts/audit_reuse.py --repo-root <repo> <target-paths...>
+/usr/bin/python3 <skill-root>/scripts/audit_reuse.py --repo-root <repo> <absolute-target-paths...>
 ```
+
+If the summary reports `omitted > 0`, split target paths into narrower batches or raise `--limit` while output remains reviewable; rerun until every candidate is visible. Record the commands and coverage, then judge visible results in context.
 
 Use this authority order: backend contract or PRD for business behavior; Figma for visual and interaction intent; repository conventions for implementation structure. Do not infer APIs, permissions, enums, submission effects, or fallback data from Figma.
 
@@ -72,7 +74,7 @@ Run owning-app formatting, focused tests, typecheck, locale-path checks, and `gi
 
 ### 7. Report Evidence
 
-Load the verification skill and use the exact final-response contract in `references/verification-contract.md`. Include changed files, commands/results, browser artifacts, reused/promoted/local decisions, dependencies, and unresolved business questions. Never claim parity, passing checks, or completion without fresh current-run evidence.
+Load the verification skill and use the exact final-response contract in `references/verification-contract.md`. Include changed files, commands/results, browser artifacts, reused/adapted/promoted/local decisions, dependencies, and unresolved business questions. Never claim parity, passing checks, or completion without fresh current-run evidence.
 
 ## Continue Conditions
 

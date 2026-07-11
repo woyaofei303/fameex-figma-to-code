@@ -13,7 +13,7 @@ Resolve the owning app from the existing route and neighboring code. Admin work 
 
 ## Component and Asset Decision Model
 
-Run the candidate audit command from `SKILL.md` against the target and nearby paths. Its line-addressable output is a bounded discovery aid, not a semantic verdict: inspect comments, strings, fixtures, indirect uses, and omitted results manually.
+Run the candidate audit command from `SKILL.md` against the target and nearby paths. Its line-addressable output is a bounded discovery aid, not a semantic verdict: inspect visible comments, strings, fixtures, and indirect uses manually. If the summary reports omitted candidates, narrow target paths into batches or increase `--limit` while output remains reviewable, rerun until all candidates are visible, and record how coverage was completed.
 
 Search in this order:
 
