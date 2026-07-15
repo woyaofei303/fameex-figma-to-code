@@ -22,7 +22,7 @@ For a no-op, record the inspection scope and evidence supporting no modification
 
 ## Stop and Continue Conditions
 
-Do not make visual parity changes without structured exact-node evidence. Do not invent business behavior. Repository-quality fixes may continue when independently evidenced, but label visual audit blocked.
+Visual work remains blocked without structured exact-node evidence. Independently evidenced non-visual repository fixes may continue, but label `visual audit blocked`. Do not invent business behavior.
 
 ## Token Controls
 

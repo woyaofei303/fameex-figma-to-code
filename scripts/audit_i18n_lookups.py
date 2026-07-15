@@ -4,12 +4,20 @@ import json
 from pathlib import Path
 import re
 import sys
-from typing import Dict, List, Sequence, Set
+from typing import Dict, List, Sequence, Set, Tuple
 
 
 SOURCE_EXTENSIONS = {'.js', '.jsx', '.ts', '.tsx'}
 STRING_LITERAL = r'''(?:'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")'''
 LITERAL_PATTERN = re.compile(r'^\s*(' + STRING_LITERAL + r')\s*$', re.DOTALL)
+LITERAL_ARRAY_PATTERN = re.compile(
+    r'^\s*\[\s*(?:'
+    + STRING_LITERAL
+    + r'\s*(?:,\s*'
+    + STRING_LITERAL
+    + r'\s*)*,?\s*)?\]\s*$',
+    re.DOTALL,
+)
 CONDITIONAL_PATTERN = re.compile(
     r'^\s*[^?]+\?\s*(?P<yes>'
     + STRING_LITERAL
@@ -17,6 +25,24 @@ CONDITIONAL_PATTERN = re.compile(
     + STRING_LITERAL
     + r')\s*$',
     re.DOTALL,
+)
+IDENTIFIER = r'[A-Za-z_$][A-Za-z0-9_$]*'
+USE_T_BINDING_PATTERN = re.compile(
+    r'\b(?:const|let|var)\s*\{(?P<body>[^{}]*)\}\s*=\s*useT\s*\(\s*'
+    r'(?P<namespace>\[[^\]]*\]|'
+    + STRING_LITERAL
+    + r')',
+    re.DOTALL,
+)
+GET_T_BINDING_PATTERN = re.compile(
+    r'\b(?:const|let|var)\s*\{(?P<body>[^{}]*)\}\s*=\s*'
+    r'(?:await\s+)?getT\s*\([^,]+,\s*(?P<namespace>'
+    + STRING_LITERAL
+    + r')',
+    re.DOTALL,
+)
+DESTRUCTURED_T_PATTERN = re.compile(
+    r'(?:^|,)\s*t\s*(?::\s*(?P<alias>' + IDENTIFIER + r'))?\s*(?=,|$)',
 )
 HEX_DIGITS = frozenset('0123456789abcdefABCDEF')
 SIMPLE_ESCAPES = {
@@ -51,6 +77,11 @@ def parse_args() -> argparse.Namespace:
         action='append',
         default=[],
         help='Exact expansion for a computed or template lookup. Repeat as needed.',
+    )
+    parser.add_argument(
+        '--allow-unused',
+        action='store_true',
+        help='Report unused leaves without failing; useful for shared namespaces.',
     )
     parser.add_argument('--json', action='store_true', dest='as_json')
     return parser.parse_args()
@@ -164,94 +195,35 @@ def first_argument(content: str, start: int) -> str:
     return content[start:]
 
 
-def is_identifier_character(character: str) -> bool:
-    return bool(character) and (
-        character.isalnum() or character in {'_', '$'}
+def translation_calls(
+    content: str,
+    call_names: Set[str],
+) -> List[Tuple[str, int, int]]:
+    if not call_names:
+        return []
+    code_mask = normal_code_mask(content)
+    names = '|'.join(
+        re.escape(name) for name in sorted(call_names, key=len, reverse=True)
     )
-
-
-def translation_call_starts(content: str) -> List[int]:
-    starts: List[int] = []
-    state = 'normal'
-    escaped = False
-    interpolation_depths: List[int] = []
-    last_significant = ''
-    index = 0
-    while index < len(content):
-        character = content[index]
-        next_character = content[index + 1] if index + 1 < len(content) else ''
-        if state in {'single', 'double'}:
-            if escaped:
-                escaped = False
-            elif character == '\\':
-                escaped = True
-            elif (
-                (state == 'single' and character == "'")
-                or (state == 'double' and character == '"')
-            ):
-                state = 'normal'
-        elif state == 'template':
-            if escaped:
-                escaped = False
-            elif character == '\\':
-                escaped = True
-            elif character == '`':
-                state = 'normal'
-                last_significant = '`'
-            elif character == '$' and next_character == '{':
-                interpolation_depths.append(1)
-                state = 'normal'
-                last_significant = '{'
-                index += 1
-        elif state == 'line-comment':
-            if character in '\r\n':
-                state = 'normal'
-        elif state == 'block-comment':
-            if character == '*' and next_character == '/':
-                state = 'normal'
-                index += 1
-        elif character == '/' and next_character == '/':
-            state = 'line-comment'
-            index += 1
-        elif character == '/' and next_character == '*':
-            state = 'block-comment'
-            index += 1
-        elif character == "'":
-            state = 'single'
-            last_significant = "'"
-        elif character == '"':
-            state = 'double'
-            last_significant = '"'
-        elif character == '`':
-            state = 'template'
-            last_significant = '`'
-        elif interpolation_depths and character == '{':
-            interpolation_depths[-1] += 1
-            last_significant = character
-        elif interpolation_depths and character == '}':
-            interpolation_depths[-1] -= 1
-            last_significant = character
-            if interpolation_depths[-1] == 0:
-                interpolation_depths.pop()
-                state = 'template'
-        elif character == 't':
-            previous = content[index - 1] if index else ''
-            cursor = index + 1
-            while cursor < len(content) and content[cursor].isspace():
-                cursor += 1
-            if (
-                previous != '.'
-                and not is_identifier_character(previous)
-                and last_significant != '.'
-                and cursor < len(content)
-                and content[cursor] == '('
-            ):
-                starts.append(cursor + 1)
-            last_significant = character
-        elif not character.isspace():
-            last_significant = character
-        index += 1
-    return starts
+    pattern = re.compile(
+        r'(?<![A-Za-z0-9_$])(?P<name>' + names + r')'
+        r'(?![A-Za-z0-9_$])\s*\(',
+    )
+    calls: List[Tuple[str, int, int]] = []
+    for match in pattern.finditer(content):
+        start = match.start('name')
+        opening_parenthesis = match.end() - 1
+        if not code_mask[start] or not code_mask[opening_parenthesis]:
+            continue
+        previous = start - 1
+        while previous >= 0 and (
+            content[previous].isspace() or not code_mask[previous]
+        ):
+            previous -= 1
+        if previous >= 0 and content[previous] == '.':
+            continue
+        calls.append((match.group('name'), match.end(), start))
+    return calls
 
 
 def strip_comments(content: str) -> str:
@@ -304,6 +276,69 @@ def strip_comments(content: str) -> str:
             state = 'template'
         index += 1
     return ''.join(stripped)
+
+
+def normal_code_mask(content: str) -> List[bool]:
+    mask = [False] * len(content)
+    state = 'normal'
+    escaped = False
+    interpolation_depths: List[int] = []
+    index = 0
+    while index < len(content):
+        character = content[index]
+        next_character = content[index + 1] if index + 1 < len(content) else ''
+        if state in {'single', 'double'}:
+            if escaped:
+                escaped = False
+            elif character == '\\':
+                escaped = True
+            elif (
+                (state == 'single' and character == "'")
+                or (state == 'double' and character == '"')
+            ):
+                state = 'normal'
+        elif state == 'template':
+            if escaped:
+                escaped = False
+            elif character == '\\':
+                escaped = True
+            elif character == '`':
+                state = 'normal'
+            elif character == '$' and next_character == '{':
+                interpolation_depths.append(1)
+                state = 'normal'
+                mask[index + 1] = True
+                index += 1
+        elif state == 'line-comment':
+            if character in '\r\n':
+                state = 'normal'
+        elif state == 'block-comment':
+            if character == '*' and next_character == '/':
+                state = 'normal'
+                index += 1
+        elif character == '/' and next_character == '/':
+            state = 'line-comment'
+            index += 1
+        elif character == '/' and next_character == '*':
+            state = 'block-comment'
+            index += 1
+        else:
+            mask[index] = True
+            if character == "'":
+                state = 'single'
+            elif character == '"':
+                state = 'double'
+            elif character == '`':
+                state = 'template'
+            elif interpolation_depths and character == '{':
+                interpolation_depths[-1] += 1
+            elif interpolation_depths and character == '}':
+                interpolation_depths[-1] -= 1
+                if interpolation_depths[-1] == 0:
+                    interpolation_depths.pop()
+                    state = 'template'
+        index += 1
+    return mask
 
 
 def decode_hex_escape(
@@ -401,16 +436,134 @@ def keys_from_argument(argument: str) -> Set[str]:
     return set()
 
 
-def referenced_keys(paths: Sequence[Path], explicit_keys: Sequence[str]) -> Set[str]:
+def namespaces_from_argument(argument: str) -> Set[str]:
+    namespaces: Set[str] = set()
+    literal_match = LITERAL_PATTERN.fullmatch(argument)
+    if literal_match:
+        namespaces.add(literal_value(literal_match.group(1)))
+    elif LITERAL_ARRAY_PATTERN.fullmatch(argument):
+        namespaces.update(
+            literal_value(match.group(0))
+            for match in re.finditer(STRING_LITERAL, argument)
+        )
+    return namespaces
+
+
+def code_block_ranges(content: str, code_mask: Sequence[bool]) -> List[Tuple[int, int]]:
+    stack: List[int] = []
+    ranges: List[Tuple[int, int]] = [(-1, len(content))]
+    for index, character in enumerate(content):
+        if not code_mask[index]:
+            continue
+        if character == '{':
+            stack.append(index)
+        elif character == '}' and stack:
+            ranges.append((stack.pop(), index))
+    ranges.extend((start, len(content)) for start in stack)
+    return ranges
+
+
+def enclosing_scope(
+    position: int,
+    ranges: Sequence[Tuple[int, int]],
+) -> Tuple[int, int]:
+    return max(
+        (scope for scope in ranges if scope[0] < position < scope[1]),
+        key=lambda scope: scope[0],
+    )
+
+
+def translation_namespace_bindings(
+    content: str,
+) -> List[Tuple[str, Set[str], int, int, int]]:
+    code_mask = normal_code_mask(content)
+    ranges = code_block_ranges(content, code_mask)
+    bindings: List[Tuple[str, Set[str], int, int, int]] = []
+    for pattern in (USE_T_BINDING_PATTERN, GET_T_BINDING_PATTERN):
+        for match in pattern.finditer(content):
+            if not code_mask[match.start()]:
+                continue
+            name_match = DESTRUCTURED_T_PATTERN.search(match.group('body'))
+            if not name_match:
+                continue
+            local_name = name_match.group('alias') or 't'
+            namespaces = namespaces_from_argument(match.group('namespace'))
+            binding_position = match.end()
+            scope_start, scope_end = enclosing_scope(binding_position, ranges)
+            bindings.append(
+                (
+                    local_name,
+                    namespaces,
+                    binding_position,
+                    scope_start,
+                    scope_end,
+                ),
+            )
+    return bindings
+
+
+def keys_for_namespace(
+    keys: Set[str],
+    namespace_name: str,
+    allow_unprefixed: bool,
+) -> Set[str]:
+    prefix = '{}:'.format(namespace_name)
+    selected: Set[str] = set()
+    for key in keys:
+        if key.startswith(prefix):
+            selected.add(key)
+        elif ':' not in key and allow_unprefixed:
+            selected.add(key)
+    return selected
+
+
+def referenced_keys(
+    paths: Sequence[Path],
+    explicit_keys: Sequence[str],
+    namespace_name: str,
+) -> Set[str]:
     referenced = set(explicit_keys)
     for path in paths:
         try:
             content = path.read_text(encoding='utf-8')
         except (OSError, UnicodeError) as error:
             raise ValueError('cannot read source {}: {}'.format(path, error))
-        for start in translation_call_starts(content):
-            referenced.update(keys_from_argument(first_argument(content, start)))
+        bindings = translation_namespace_bindings(content)
+        call_names = {'t'} | {binding[0] for binding in bindings}
+        for call_name, argument_start, call_position in translation_calls(
+            content,
+            call_names,
+        ):
+            active_bindings = [
+                binding
+                for binding in bindings
+                if binding[0] == call_name
+                and binding[2] < call_position < binding[4]
+                and binding[3] < call_position
+            ]
+            if active_bindings:
+                active = max(
+                    active_bindings,
+                    key=lambda binding: (binding[3], binding[2]),
+                )
+                allow_unprefixed = namespace_name in active[1]
+            else:
+                allow_unprefixed = call_name == 't'
+            call_keys = keys_from_argument(
+                first_argument(content, argument_start),
+            )
+            referenced.update(
+                keys_for_namespace(call_keys, namespace_name, allow_unprefixed),
+            )
     return referenced
+
+
+def normalize_namespace_prefix(keys: Set[str], namespace_name: str) -> Set[str]:
+    prefix = '{}:'.format(namespace_name)
+    return {
+        key[len(prefix):] if key.startswith(prefix) else key
+        for key in keys
+    }
 
 
 def result_payload(leaves: Set[str], referenced: Set[str]) -> Dict[str, object]:
@@ -442,7 +595,10 @@ def main() -> int:
     try:
         leaves = flatten_leaves(load_namespace(args.namespace_json))
         paths = source_files(args.source)
-        referenced = referenced_keys(paths, args.key)
+        referenced = normalize_namespace_prefix(
+            referenced_keys(paths, args.key, args.namespace_json.stem),
+            args.namespace_json.stem,
+        )
     except ValueError as error:
         print(str(error), file=sys.stderr)
         return 2
@@ -452,7 +608,11 @@ def main() -> int:
         print(json.dumps(payload, ensure_ascii=False, separators=(',', ':')))
     else:
         print_plain(payload)
-    return 1 if payload['missing_keys'] or payload['unused_keys'] else 0
+    has_failure = bool(
+        payload['missing_keys']
+        or (payload['unused_keys'] and not args.allow_unused)
+    )
+    return 1 if has_failure else 0
 
 
 if __name__ == '__main__':

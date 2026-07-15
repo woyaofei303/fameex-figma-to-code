@@ -7,6 +7,8 @@ description: Use when a task involves a Figma Design URL, exact node-id, design 
 
 Use the available Figma MCP tools. Require a design URL with an exact `node-id` when using the remote server.
 
+Installing this fallback skill does not install or authenticate the Figma MCP server. If the required tools are unavailable, authentication is unproven, or a newly registered server is not exposed to the current task, read [references/figma-mcp-config.md](references/figma-mcp-config.md) completely before continuing.
+
 ## Required Order
 
 1. Parse `fileKey` and `nodeId` from the URL.

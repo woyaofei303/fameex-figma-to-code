@@ -4,7 +4,7 @@ Load only when the selected Figma node or existing branch contains a real query,
 
 ## Contract Manifest
 
-Complete one entry for each independently owned server interaction before editing UI code. Use `unresolved` for missing facts and keep dependent controls unavailable until they are established.
+Complete one entry for each independently owned server interaction before editing that interaction or slice. Use `unresolved` for missing facts and keep only dependent controls unavailable. An unresolved interaction must not block a confirmed independent slice.
 
 ```yaml
 consumer_app: apps/admin | apps/web | apps/futures-admin | legacy-admin
@@ -33,7 +33,7 @@ The manifest is an evidence record, not a design proposal. Figma sample rows, la
 2. Trace the request from component or hook through the shared transport. Confirm prefix handling, credentials, request encoding, and whether the transport unwraps or transforms responses.
 3. Preserve backend identity values internally. Normalize labels only at the display or request boundary; never derive mutation identifiers from formatted text.
 4. Give each list query a key containing every value that changes its result. Gate it with the route/tab prerequisites in `enabled_condition` so inactive tabs do not issue requests.
-5. Keep sibling tabs' filters and pagination independent unless the product contract explicitly shares them. A filter change resets only the affected pagination. Reuse the owning Admin page's field/control width pattern across sibling tabs; do not introduce a feature-global magic width from one screenshot.
+5. Keep sibling tabs' filters and pagination independent unless the product contract explicitly shares them. A filter change resets only the affected pagination. Follow the always-loaded repository rules for field/control widths.
 6. On mutation success, refresh only the affected data using the repository's established invalidation or refetch pattern. On failure, retain actionable form state and established feedback.
 7. Model loading, error, empty, disabled, and unavailable states. Do not replace missing contracts or failed authorization with mock data, hard-coded pairs, or false success.
 

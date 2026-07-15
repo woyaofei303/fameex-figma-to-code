@@ -107,6 +107,8 @@ Skill 按七个阶段执行：
 ### 多语言
 
 - 页面可见文案、提示、校验、状态、无障碍标签和 Metadata 都进入 i18n。
+- Customer Web 的页面级 Meta 文案统一放在 `tdk`，页面正文继续使用所属业务 namespace；后端返回的动态 SEO 不复制到 `tdk`。
+- 如果新的 `tdk` 路由 key 只补简体中文，还要把该 key 加入 `ZH_CN_SOURCE_ONLY_TDK_KEYS`，补 loader 测试，并实际打开一个非中文路由确认不会显示 raw key。
 - 默认只新增或修改简体中文 `zh-CN` / `zh_CN`。
 - 不自动生成英文、机器翻译、其他语言占位文件或复制中文。
 - 其他语言由翻译人员维护。
@@ -158,7 +160,7 @@ SKILL_DIR="/Users/julian/fameex-figma-to-code"
   --json
 ```
 
-动态或模板 key 不会被猜测，需要用可重复的 `--key` 参数显式补充。
+脚本会按 `useT` / `getT` 的静态作用域区分 namespace，也识别 `{ t: tVip }` 这类静态别名。动态或模板 key 不会被猜测，需要用可重复的 `--key` 参数显式补充。检查 `tdk` 这类共享 namespace 的单个页面时增加 `--allow-unused`；其他页面的未使用 key 会保留在报告中，但不会让本次检查失败。
 
 ### 缺失依赖补齐
 
@@ -170,6 +172,22 @@ SKILL_DIR="/Users/julian/fameex-figma-to-code"
 ```
 
 脚本不会覆盖已存在的 Skill 目录。只有四项能力全部缺失时才省略 `--dependency`。详细规则见 [`references/dependency-bootstrap.md`](./references/dependency-bootstrap.md)。
+
+### Figma MCP 首次配置
+
+`figma` Skill 已安装，不代表当前 Codex 已经能读取 Figma。Skill 会先检查当前任务的工具和已有 MCP 配置；如果已经存在一个指向官方地址、完成 OAuth 且可调用的配置，就直接复用，不会因为另一个同地址配置显示 `Not logged in` 而重复登录。
+
+本机还没有 Figma MCP 时，推荐执行：
+
+```bash
+codex mcp add figmaremotemcp --url https://mcp.figma.com/mcp
+codex mcp login figmaremotemcp
+codex mcp list
+```
+
+OAuth 授权需要用户确认，Codex 可以发起登录并打开授权流程，但不能替用户静默确认。登录后还会在当前任务里实际调用身份读取、目标节点结构和同节点截图；只有这些工具都能调用，才继续开发页面。
+
+如果登录成功后当前任务仍看不到 Figma 工具，需要重启 Codex 或新建任务，再重新加载 Skill。不能只凭登录成功、网页截图或已有代码猜测设计。
 
 ## PR-01982 实际案例
 
@@ -195,7 +213,7 @@ SKILL_DIR="/Users/julian/fameex-figma-to-code"
 - 五个敏感信息输入和 CTA 从可交互改为禁用。
 - Input 继续复用 `@fameex/ui`，原生 CTA 改为共享 `Button`。
 - 新文案只补充简体中文。
-- VipGift 自身测试为 4/4；完整 VIP 聚焦测试为 29/29，Skill 自测为 29/29。
+- 聚焦测试负责锁住游客状态、资格边界、禁用提交和多语言路径。验证数字以命令的当前输出为准，不在案例里长期写死。
 
 Figma 案例：
 
@@ -216,9 +234,13 @@ cd /Users/julian/fameex-figma-to-code
 
 当前测试覆盖：
 
+下面包含脚本行为测试和 Skill 静态合同检查；静态合同检查用于防止关键规则被删，不能代替真实 MCP、仓库和浏览器验证。
+
 - 复用候选扫描。
 - i18n 静态引用扫描。
+- Customer Web `tdk` Metadata 归属和 namespace 前缀扫描。
 - 依赖补齐和不覆盖保护。
+- Figma MCP 注册、OAuth、重复配置选择和运行时刷新边界的静态合同检查。
 - 可选接口联调引用、契约字段、分应用测试命令和网络证据要求。
 
 再检查运行环境：

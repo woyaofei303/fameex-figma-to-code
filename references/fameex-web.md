@@ -4,10 +4,10 @@ Load during repository mapping and touched-scope validation.
 
 ## Workspace Ownership
 
-- Repository: `/Users/julian/fameex-web`.
+- Repository: `<repo-root>` discovered from the active worktree.
 - Customer Web: `apps/web`; primary components: `@fameex/ui` / `packages/ui`.
 - Next.js Admin: `apps/admin`; Futures Admin: `apps/futures-admin`.
-- Shared icons: `packages/icon`; utilities and hooks: `packages/utils`.
+- Shared icons: `packages/icon`; utilities: `packages/utils`; hooks remain in the owning app unless repository evidence shows a shared owner.
 
 Resolve the owning app from the existing route and neighboring code. Admin work must follow that app's established Ant Design, Element, or other existing component system; do not import the customer Web system merely for visual similarity.
 
@@ -41,6 +41,8 @@ Give every non-`reuse` item a short reason. Prefer `adapt` over cloning. Do not 
 
 Use the owning system's Input, Select, Button, Checkbox, form, and feedback primitives when their behavior fits. Preserve accessibility, validation, loading, disabled, focus, and keyboard contracts. A composed control may remain local when shared primitives cannot supply required search, virtualization, formatting, or domain behavior without high complexity; reuse suitable primitives inside it.
 
+Across sibling tabs, reuse the owning Admin page's field/control width pattern. Do not copy a one-frame magic width or create a feature-global width without reuse evidence.
+
 Without a confirmed submission or mutation contract, do not leave a form or CTA that can only fail or falsely succeed. Especially for addresses, account identifiers, and proof uploads, disable or hide data-collection controls and the CTA, and keep the unavailable state visible until the contract exists.
 
 ### Icons and Artwork
@@ -56,7 +58,7 @@ Choose `promote` when the icon has stable product semantics, a reusable name, an
 
 ## Implementation Conventions
 
-- Use TypeScript and React function components; match nearby naming, styling, imports, and file layout.
+- Use TypeScript and React function components in typed apps; in Legacy Admin, preserve its existing JavaScript unless migration is explicitly in scope. Match nearby naming, styling, imports, and file layout.
 - Use TanStack React Query for server state and Zustand for local UI state when the owning feature does.
 - Treat real payloads, PRDs, backend comments, and user corrections as authoritative.
 - Trace whether copy is backend-returned, localized, or frontend-composed before editing it.
@@ -70,15 +72,18 @@ Choose `promote` when the icon has stable product semantics, a reusable name, an
 
 For customer Web, frontend-owned copy and Simplified Chinese source coverage are implementation scope; other languages are a translation-team handoff.
 
-- Reuse the closest namespace; create one only when no existing namespace owns the copy.
-- Use `useT('<namespace>')` in client components and `getT(lang, '<namespace>')` for server metadata.
-- Localize headings, labels, placeholders, validation, feedback, states, buttons, accessibility labels, and metadata.
+- Body copy remains in the owning feature namespace; use `useT('<namespace>')` in client components and create a namespace only when no existing one owns the copy.
+- Customer Web page-level metadata belongs to the dedicated `tdk` namespace. For frontend-owned static metadata, use `const { t } = await getT(lang, 'tdk')` with `tdk:<route-key>.title`, `tdk:<route-key>.description`, and `tdk:<route-key>.keyWords`; follow the established route-key shape, while the Next.js `Metadata` field remains `keywords`.
+- Do not add a `meta` subtree to a feature namespace. When migrating one, trace all consumers before removing it and validate the `tdk` lookup plus non-`zh` fallback.
+- Backend-owned dynamic SEO remains backend-owned; do not duplicate article or CMS metadata in `tdk`.
+- Localize headings, labels, placeholders, validation, feedback, states, buttons, and accessibility labels.
 - Keep validators and normalizers language-neutral; translate their codes at the rendering boundary.
 - Add or update only `zh-CN` / `zh_CN` resources by default. Never generate English, machine translations, placeholders, or copied Chinese in other locales.
 - Add another locale only when explicitly requested or supplied; preserve translation-team content and key shape.
 - Keep dotted lookups as nested JSON and verify callsite, namespace filename, and JSON path together.
-- Do not localize backend-owned content without a confirmed contract.
+- Do not localize other backend-owned content without a confirmed contract.
 - When a new namespace has only `zh-CN` / `zh_CN` source resources, validate fallback through at least one supported non-`zh` locale before completion and prove that source copy renders instead of a raw key. If the repository uses an explicit source-only namespace allow-list, add only the new namespace to the existing allow-list, preserve all existing entries, and test that an unregistered namespace retains its previous behavior.
+- A shared `tdk` namespace needs key-level fallback, not namespace-level fallback. When a route key exists only in Simplified Chinese, add that exact key to the repository's `ZH_CN_SOURCE_ONLY_TDK_KEYS`, preserve translated keys, add a focused loader test, and verify one supported non-`zh` route without a raw key.
 - Never add other-locale files solely to suppress a raw key.
 - Check other-locale parity only when those translated resources already exist or are explicitly in scope; never create files solely for parity.
 
@@ -96,6 +101,10 @@ namespace leaves before completion:
 
 Repeat `--source` for each bounded file or directory. Template and computed
 lookups are not inferred; provide every exact expansion with repeatable `--key`.
+For a shared namespace such as `tdk`, add `--allow-unused` so unrelated page keys
+remain reported but do not fail the touched-page audit. Missing keys still fail.
+For recognized literal `useT` or `getT` bindings, the scanner ignores unprefixed
+`t()` calls owned by another namespace, so nearby feature sources can be included.
 This audit does not change the source-only namespace or fallback rules above.
 
 ## Route, Shell, Theme, and Account State
@@ -135,4 +144,4 @@ node --check <legacy-admin-files...>
 git diff --check
 ```
 
-Finish every block with `git status --short` and `git diff -- <touched-paths...>`. Validate Simplified Chinese JSON and every lookup path deterministically; include other-locale parity only when already in scope. Report repository-wide baseline noise separately.
+Finish every block with `git status --short` and `git diff -- <touched-paths...>`. Validate Simplified Chinese JSON and in-scope static lookups with the scanner; enumerate dynamic or template paths with `--key`. Include other-locale parity only when already in scope. Report repository-wide baseline noise separately.

@@ -1,6 +1,6 @@
 # Browser Validation and Completion Contract
 
-Load before Playwright and again before the final response. This file is the single browser checklist.
+Load before Playwright. Reuse it for the final response while it remains in context; reload only after context loss. This file is the single browser checklist.
 
 ## Artifacts
 

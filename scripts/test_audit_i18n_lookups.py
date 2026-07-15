@@ -14,6 +14,7 @@ def run_audit(
     *sources: Path,
     keys=(),
     as_json: bool = True,
+    allow_unused: bool = False,
 ):
     command = [
         sys.executable,
@@ -25,6 +26,8 @@ def run_audit(
         command.extend(('--source', str(source)))
     for key in keys:
         command.extend(('--key', key))
+    if allow_unused:
+        command.append('--allow-unused')
     if as_json:
         command.append('--json')
     return subprocess.run(
@@ -90,6 +93,256 @@ class AuditI18nLookupsTest(unittest.TestCase):
 
             self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
             self.assertEqual(json.loads(result.stdout)['referenced_count'], 2)
+
+    def test_strips_matching_namespace_prefix_from_lookup_keys(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            namespace = root / 'zh-CN' / 'tdk.json'
+            namespace.parent.mkdir(parents=True)
+            namespace.write_text(
+                json.dumps(
+                    {
+                        'vip': {
+                            'title': 'VIP',
+                            'description': 'VIP description',
+                            'keyWords': 'VIP keywords',
+                        }
+                    }
+                ),
+                encoding='utf-8',
+            )
+            source = root / 'page.tsx'
+            source.write_text(
+                "\n".join(
+                    (
+                        "t('tdk:vip.title')",
+                        "t('tdk:vip.description')",
+                        "t('tdk:vip.keyWords')",
+                    )
+                ),
+                encoding='utf-8',
+            )
+
+            result = run_audit(namespace, source)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(
+                json.loads(result.stdout),
+                {
+                    'referenced_count': 3,
+                    'leaf_count': 3,
+                    'missing_keys': [],
+                    'unused_keys': [],
+                },
+            )
+
+    def test_allow_unused_checks_shared_namespace_for_missing_keys_only(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            namespace = root / 'zh-CN' / 'tdk.json'
+            namespace.parent.mkdir(parents=True)
+            namespace.write_text(
+                json.dumps(
+                    {
+                        'vip': {'title': 'VIP'},
+                        'about': {'title': 'About'},
+                    }
+                ),
+                encoding='utf-8',
+            )
+            source = root / 'page.tsx'
+            source.write_text("t('tdk:vip.title')\n", encoding='utf-8')
+
+            result = run_audit(namespace, source, allow_unused=True)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(
+                json.loads(result.stdout),
+                {
+                    'referenced_count': 1,
+                    'leaf_count': 2,
+                    'missing_keys': [],
+                    'unused_keys': ['about.title'],
+                },
+            )
+
+    def test_shared_namespace_ignores_calls_bound_to_another_namespace(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            namespace = root / 'zh-CN' / 'tdk.json'
+            namespace.parent.mkdir(parents=True)
+            namespace.write_text(
+                json.dumps({'VIP': {'title': 'VIP'}}),
+                encoding='utf-8',
+            )
+            metadata = root / 'page.tsx'
+            metadata.write_text(
+                "const { t } = await getT(lang, 'tdk')\n"
+                "t('tdk:VIP.title')\n",
+                encoding='utf-8',
+            )
+            feature = root / 'feature.tsx'
+            feature.write_text(
+                "const { t } = useT('vipCenter')\n"
+                "t('benefits.title')\n"
+                "t('tdk:VIP.title')\n",
+                encoding='utf-8',
+            )
+
+            result = run_audit(
+                namespace,
+                metadata,
+                feature,
+                allow_unused=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(
+                json.loads(result.stdout),
+                {
+                    'referenced_count': 1,
+                    'leaf_count': 1,
+                    'missing_keys': [],
+                    'unused_keys': [],
+                },
+            )
+
+    def test_unprefixed_calls_are_kept_when_bound_to_target_namespace(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            namespace = root / 'zh-CN' / 'tdk.json'
+            namespace.parent.mkdir(parents=True)
+            namespace.write_text(
+                json.dumps({'VIP': {'title': 'VIP'}}),
+                encoding='utf-8',
+            )
+            source = root / 'page.tsx'
+            source.write_text(
+                "const { t } = await getT(lang, 'tdk')\n"
+                "t('VIP.title')\n",
+                encoding='utf-8',
+            )
+
+            result = run_audit(namespace, source)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(json.loads(result.stdout)['referenced_count'], 1)
+
+    def test_namespace_bindings_inside_strings_templates_and_comments_are_ignored(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            namespace = self.write_namespace(root, {'real': 'Real'})
+            source = root / 'page.tsx'
+            source.write_text(
+                '''const text = "const { t } = useT('other')"
+const template = `const { t } = useT('other')`
+// const { t } = useT('other')
+/* const { t } = useT('other') */
+t('real')
+''',
+                encoding='utf-8',
+            )
+
+            result = run_audit(namespace, source)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(json.loads(result.stdout)['referenced_count'], 1)
+
+    def test_array_namespace_binding_excludes_unrelated_unprefixed_calls(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            namespace = root / 'zh-CN' / 'tdk.json'
+            namespace.parent.mkdir(parents=True)
+            namespace.write_text(
+                json.dumps({'VIP': {'title': 'VIP'}}),
+                encoding='utf-8',
+            )
+            source = root / 'tabs.tsx'
+            source.write_text(
+                "const { t } = useT(['home', 'header'])\n"
+                "t('nav.title')\n"
+                "t('tdk:VIP.title')\n",
+                encoding='utf-8',
+            )
+
+            result = run_audit(namespace, source)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(json.loads(result.stdout)['referenced_count'], 1)
+
+    def test_multiple_namespace_bindings_are_scoped_within_one_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            namespace = root / 'zh-CN' / 'tdk.json'
+            namespace.parent.mkdir(parents=True)
+            namespace.write_text(
+                json.dumps({'VIP': {'title': 'VIP'}}),
+                encoding='utf-8',
+            )
+            source = root / 'mixed.tsx'
+            source.write_text(
+                '''function metadata() {
+  const { t } = useT('tdk')
+  return t('VIP.title')
+}
+
+function header() {
+  const { t } = useT('header')
+  return t('nav.title')
+}
+''',
+                encoding='utf-8',
+            )
+
+            result = run_audit(namespace, source)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(json.loads(result.stdout)['referenced_count'], 1)
+
+    def test_aliased_translation_binding_is_scanned(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            namespace = self.write_namespace(
+                root,
+                {'account': {'title': 'Account'}},
+            )
+            source = root / 'account.tsx'
+            source.write_text(
+                "const { t: tVip } = useT('namespace')\n"
+                "tVip('account.title')\n",
+                encoding='utf-8',
+            )
+
+            result = run_audit(namespace, source)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(json.loads(result.stdout)['referenced_count'], 1)
+
+    def test_namespace_scope_survives_template_interpolation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            namespace = root / 'zh-CN' / 'tdk.json'
+            namespace.parent.mkdir(parents=True)
+            namespace.write_text(
+                json.dumps({'meta': {'title': 'Title'}}),
+                encoding='utf-8',
+            )
+            source = root / 'template.tsx'
+            source.write_text(
+                '''function page() {
+  const { t } = useT('feature')
+  const label = `${format(value)}`
+  return t('body.title')
+}
+t('tdk:meta.title')
+''',
+                encoding='utf-8',
+            )
+
+            result = run_audit(namespace, source)
+
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertEqual(json.loads(result.stdout)['referenced_count'], 1)
 
     def test_detects_literal_branches_of_simple_conditional_first_argument(self):
         with tempfile.TemporaryDirectory() as directory:

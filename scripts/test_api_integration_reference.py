@@ -12,6 +12,19 @@ class ApiIntegrationReferenceTest(unittest.TestCase):
         self.assertIn('references/api-integration.md', skill)
         self.assertIn('server-backed', skill)
         self.assertIn('contract manifest', skill)
+        self.assertIn('each interaction or independently releasable slice', skill)
+
+    def test_contract_gate_does_not_block_independent_slices(self):
+        reference = (ROOT / 'references/api-integration.md').read_text()
+
+        self.assertIn('before editing that interaction or slice', reference)
+        self.assertIn('must not block a confirmed independent slice', reference)
+
+    def test_admin_filter_width_rule_is_in_always_loaded_repository_rules(self):
+        rules = (ROOT / 'references/fameex-web.md').read_text()
+
+        self.assertIn("owning Admin page's field/control width pattern", rules)
+        self.assertIn('sibling tabs', rules)
 
     def test_reference_defines_reusable_contract_manifest(self):
         reference = (ROOT / 'references/api-integration.md').read_text()
