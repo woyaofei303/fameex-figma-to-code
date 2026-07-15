@@ -24,6 +24,7 @@ Keep only useful review evidence: desktop screenshot at the Figma width, applica
 8. Load `zh-CN`; check raw keys, fallback copy, validation text, metadata, accessibility labels, truncation, overlap, and horizontal overflow. For a source-only namespace, also load at least one supported non-`zh` locale and prove fallback copy renders without raw keys. Otherwise, check another locale only when its translated resource already exists or is explicitly in scope.
 9. Capture desktop and applicable mobile evidence. If Figma has one viewport, use it exactly and add one repository-breakpoint smoke check, clearly labeling that responsive expectation as repository-derived.
 10. Re-run each affected step after a fix.
+11. For each server-backed interaction, capture sanitized evidence for method, path, query, and body field names; the response fields consumed after transport normalization; loading, error, empty, and disabled states; mutation invalidation or refetch; and proof that an inactive tab does not query. Never retain credentials, cookies, tokens, personal data, or file binary.
 
 When local authentication or eligibility differs from the Figma state, state the difference. Never treat sample account values or an unlocked design state as backend validation.
 
@@ -55,7 +56,7 @@ Return these sections in order:
 2. **Figma Mapping** — file/node and implemented sections/components.
 3. **Reuse Decisions** — reused/adapted/promoted/local components and assets, with reasons for non-reuse; list shared hooks, tokens, icons, services, and state patterns.
 4. **修改文件** — every changed absolute path in a copyable fenced block.
-5. **Validation** — exact command/step and result for Biome, owning-app typecheck, focused tests, Simplified Chinese JSON and lookup coverage, localized metadata, `git diff --check`, Playwright desktop/mobile, and confirmed interactions. Include other-locale evidence only when in scope. Classify failures as introduced, pre-existing, or environmental.
+5. **Validation** — exact command/step and result for Biome, owning-app typecheck, owning-package focused tests, Simplified Chinese JSON and lookup coverage, localized metadata, `git diff --check`, Playwright desktop/mobile, confirmed interactions, and applicable sanitized network/state evidence. Include other-locale evidence only when in scope. Classify failures as introduced, pre-existing, or environmental.
 6. **Artifacts** — absolute screenshot/trace paths.
 7. **Failures and Deviations** — failure-record shape; `None` only when evidence supports it.
 8. **Pending Business Questions** — behavior not established by Figma and repository evidence.
@@ -70,6 +71,7 @@ Before claiming completion, verify:
 - The owning component system was preferred; any local control has a recorded behavior/complexity reason.
 - Existing icons were checked; a missing icon uses the Figma original or was promoted to `packages/icon` only when semantically reusable.
 - No business behavior was guessed; route targets and account assumptions were validated or reported.
+- Server-backed work has a completed contract manifest, owning-package test evidence, and sanitized network/state evidence, or a concrete blocker is reported.
 - Frontend-owned copy, validation, accessibility labels, and metadata use i18n; Simplified Chinese source keys are complete; no other-language files were generated unless explicitly requested.
 - Exact-viewport and responsive evidence exists, or the concrete browser blocker is reported.
 - Every changed file is listed and fresh output supports every pass claim.

@@ -108,16 +108,31 @@ Record `git status --short`; preserve unrelated changes. Prefer `git show <branc
 
 ## Touched-Scope Validation
 
-Use the owning package and exact touched files:
+Use the owning package and exact touched files. Choose only the applicable app block; do not combine all typechecks.
+
+Customer Web tests use the root Vitest configuration because its aliases resolve Web paths:
 
 ```bash
 pnpm exec biome check --write --no-errors-on-unmatched <touched-files...>
 pnpm --filter @fameex/web typecheck
-pnpm --filter @fameex/admin typecheck
-pnpm vitest --run --cache=false <target-tests...>
+pnpm vitest --run --cache=false <web-target-tests...>
 git diff --check
-git status --short
-git diff -- <touched-paths...>
 ```
 
-Run only the applicable package typecheck. Validate Simplified Chinese JSON and every lookup path deterministically; include other-locale parity only when already in scope. Report repository-wide baseline noise separately. For excluded legacy-admin files, add direct syntax and diff checks appropriate to the language.
+Next.js Admin tests must run in the Admin package context so `@` resolves to `apps/admin/src` instead of `apps/web/src`:
+
+```bash
+pnpm exec biome check --write --no-errors-on-unmatched <touched-files...>
+pnpm --filter @fameex/admin typecheck
+pnpm --filter @fameex/admin exec vitest --run --cache=false <admin-target-tests...>
+git diff --check
+```
+
+Use the equivalent package-scoped command for `@fameex/futures-admin`. For excluded legacy Admin JavaScript, do not claim Biome coverage; add direct syntax and diff checks:
+
+```bash
+node --check <legacy-admin-files...>
+git diff --check
+```
+
+Finish every block with `git status --short` and `git diff -- <touched-paths...>`. Validate Simplified Chinese JSON and every lookup path deterministically; include other-locale parity only when already in scope. Report repository-wide baseline noise separately.

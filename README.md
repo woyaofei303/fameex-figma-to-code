@@ -73,7 +73,7 @@ Skill 按七个阶段执行：
 1. 确认仓库、worktree、分支、目标路由、Figma 节点和语言命名空间。
 2. 获取同一节点的结构化设计信息和截图，并按需读取变量和原始素材。
 3. 映射真实路由、相邻实现、组件库、Icon、服务、状态和 i18n。
-4. 按可独立验证的切片实现，不从 Figma 猜测接口或业务状态。
+4. 涉及真实查询、变更、上传或后端状态时先完成接口契约清单，再按可独立验证的切片实现。
 5. 在真实浏览器中检查指定视口、响应式、交互、素材和控制台。
 6. 对改动范围执行格式化、测试、类型检查、i18n 和 Git Diff 校验。
 7. 汇总复用决策、验证结果、截图证据和待确认业务问题。
@@ -123,6 +123,12 @@ Figma 用于确认视觉和交互意图，不作为接口或权限合同。
 - 权限、枚举和跳转目标。
 
 涉及地址、账号、证明材料等敏感信息时，如果提交合同尚未确认，先停止提交能力并报告缺失合同。继续完成视觉页面时，只能依据设计证据、仓库约定或用户确认选择隐藏或禁用输入和 CTA；不得留下只能失败或伪造成功的操作。
+
+### 接口联调
+
+只有页面包含真实查询、变更、上传或后端状态时，Skill 才加载 [`references/api-integration.md`](./references/api-integration.md)。它要求先记录消费应用、接口来源、方法和路径、鉴权范围、请求/响应字段、边界转换、Query Key、启用条件、变更后刷新方式及验证证据。
+
+Admin 聚焦测试必须在 `@fameex/admin` 包上下文运行，避免根目录 Vitest 把 `@` 解析到 Web；Web 测试继续使用根目录配置。跨应用接口在复用前必须用消费应用的真实登录态验证鉴权、代理前缀和响应语义。
 
 ## 内置检查脚本
 
@@ -213,6 +219,7 @@ cd /Users/julian/fameex-figma-to-code
 - 复用候选扫描。
 - i18n 静态引用扫描。
 - 依赖补齐和不覆盖保护。
+- 可选接口联调引用、契约字段、分应用测试命令和网络证据要求。
 
 再检查运行环境：
 
@@ -238,5 +245,6 @@ assets/fallback-skills/  缺失依赖的安全兜底
 
 - [`SKILL.md`](./SKILL.md)：完整执行流程。
 - [`references/fameex-web.md`](./references/fameex-web.md)：FameEX Web 组件、Icon、多语言和验证规则。
+- [`references/api-integration.md`](./references/api-integration.md)：真实查询、变更、上传和后端状态的接口联调规则。
 - [`references/existing-implementation-audit.md`](./references/existing-implementation-audit.md)：已有分支的审计流程。
 - [`references/verification-contract.md`](./references/verification-contract.md)：浏览器证据与最终交付合同。

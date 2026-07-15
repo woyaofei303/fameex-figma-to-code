@@ -58,13 +58,15 @@ If the summary reports `omitted > 0`, split target paths into narrower batches o
 
 Use this authority order: backend contract or PRD for business behavior; Figma for visual and interaction intent; repository conventions for implementation structure. Do not infer APIs, permissions, enums, submission effects, or fallback data from Figma.
 
+When the selected node or existing branch includes server-backed queries, mutations, uploads, or status fields, read [references/api-integration.md](references/api-integration.md) and complete its contract manifest before UI edits. Skip that reference for purely presentational work.
+
 ### 4. Implement in Slices
 
 Load `figma-implement-design`. For large frames, implement independently verifiable slices. Follow the component and asset decision model in `references/fameex-web.md`; prefer the owning app's component system and use original Figma assets when no suitable shared icon exists.
 
 Route frontend-owned visible copy, validation, accessibility labels, and metadata through i18n. Add or modify only Simplified Chinese (`zh-CN`/`zh_CN`) resources by default. Never create translations or Chinese placeholders in other locales; translation staff owns them unless the user explicitly expands scope.
 
-Keep unconfirmed business behavior out of production code. Add focused tests for confirmed logic or interactions.
+Keep unconfirmed business behavior out of production code. For server-backed work, implement from the completed contract manifest and preserve query/mutation lifecycle evidence. Add focused tests for confirmed logic or interactions.
 
 ### 5. Validate in a Browser
 
