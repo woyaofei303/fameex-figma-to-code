@@ -1,0 +1,44 @@
+feature:
+  id: <ticket-or-name>
+  repository: <absolute-path>
+  branch: <branch>
+  mode: feature-delivery
+
+product_sources:
+  - title: <document-title>
+    url: <doc-or-wiki-url>
+    revision: <revision>
+    status: read | missing-permission
+    embedded_resources: []
+
+figma_sources:
+  global_root: <figma-url>
+  discovered_nodes:
+    - node_id: <node-id>
+      state: <visible-state>
+      exact_implementation_node: true
+
+conflicts:
+  - topic: <behavior-or-visual-conflict>
+    sources: []
+    resolution: <confirmed-answer-or-unresolved>
+    owner: <product-design-backend-frontend>
+
+slices:
+  - id: <slice-id>
+    name: <business-slice>
+    app: apps/admin | apps/web | other
+    route: <route>
+    requirements:
+      - id: <requirement-id>
+        source: <document-section-and-revision>
+    figma_nodes:
+      - node_id: <node-id>
+        state: <visible-state>
+    code_targets: []
+    api_status: not-required | waiting | documented | integrated | verified
+    api_contract: <reference-or-unresolved>
+    acceptance: []
+    evidence: []
+    blockers: []
+    status: planned | ready | in-progress | blocked | verified

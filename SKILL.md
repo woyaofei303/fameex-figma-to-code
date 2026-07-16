@@ -1,36 +1,38 @@
 ---
 name: fameex-figma-to-code
-description: Use when implementing or reproducing a FameEX frontend interface from a Figma Design URL, exact frame link, or node-id, especially when the work must fit an existing route, component system, localization model, and browser-verified workflow.
+description: Use when implementing or auditing a FameEX frontend feature from a product requirement, Figma Design URL, exact frame, or node-id, especially across routes, states, APIs, localization, and browser verification.
 ---
 
 # FameEX Figma to Code
 
-Implement the exact Figma node in its owning FameEX app. Preserve behavior, reuse its design system, and support claims with fresh evidence.
+Turn confirmed product and design evidence into code in the owning FameEX app. Preserve behavior, reuse the design system, and prove results.
 
 ## Preflight
 
-Require a Figma Design URL with `node-id`; accept an optional route or component path. Without a target, continue only when the repository identifies one surface unambiguously. Never create a parallel route.
+Record repository, worktree, branch, dirty state, app, route, locale namespace, and loaded skill root. Preserve unrelated changes. Stop only the unsafe or unverified dependent part.
 
-Record the repository, worktree, branch, dirty state, owning app, route, locale namespace, and loaded skill root. Preserve unrelated changes. Stop for an invalid node, unrecoverable authentication, ambiguous target, unsafe overlap, or unknown destructive/external behavior.
+Read [references/capability-registry.md](references/capability-registry.md); resolve only required or triggered capabilities. If the skill is missing or required Figma tools fail, follow [references/dependency-bootstrap.md](references/dependency-bootstrap.md), validate, and resume the original task. Never overwrite a skill directory. A `figma` skill, MCP registration, or OAuth alone is insufficient: require an authenticated exact-node read in the current task.
 
-Read [references/capability-registry.md](references/capability-registry.md) before work and resolve only required or triggered capabilities. If the skill is missing or required Figma tools fail, follow [references/dependency-bootstrap.md](references/dependency-bootstrap.md), validate the result, and resume the original task. Never overwrite a skill directory. A `figma` skill, MCP registration, or OAuth alone is insufficient: require an authenticated exact-node read in the current task.
+Select one mode:
 
-For an existing branch, select `audit-existing`, fix a merge-base, create a route/node/code manifest, and load [references/existing-implementation-audit.md](references/existing-implementation-audit.md).
+- `feature-delivery`: PRD, global design entry, or multi-page feature. Load [references/product-delivery-workflow.md](references/product-delivery-workflow.md), build the Feature Manifest, and do not code until slices and conflicts are mapped.
+- `slice-implementation`: load that manifest; require the slice's exact nodes, route, behavior, and API status.
+- `audit-existing`: fix a merge-base, create a route/node/code manifest, and load [references/existing-implementation-audit.md](references/existing-implementation-audit.md).
 
 ## Workflow
 
-1. **Collect design evidence.** Load `figma`; fetch structured context and a same-node screenshot before coding. Capture hierarchy, constraints, tokens, copy, assets, states, navigation, account assumptions, and unknown behavior.
-2. **Map the repository.** Read [references/fameex-web.md](references/fameex-web.md); inspect the route, shell, adjacent code, services, state, i18n, tests, and responsive conventions. Run the bounded reuse audit from the loaded skill root:
+1. **Collect evidence.** Load `figma`; fetch structured context and same-node screenshot. Capture hierarchy, constraints, tokens, copy, assets, states, navigation, account assumptions, and unknowns.
+2. **Map code.** Read [references/fameex-web.md](references/fameex-web.md); inspect route, shell, adjacent code, services, state, i18n, tests, and responsive patterns. Run:
 
    ```bash
    /usr/bin/python3 <skill-root>/scripts/audit_reuse.py --repo-root <repo> <absolute-target-paths...>
    ```
 
-   Resolve omissions with narrower batches or a reviewable higher limit. Classify controls and assets as `reuse`, `adapt`, `promote`, or `local`; explain non-reuse.
-3. **Lock business contracts.** Backend contracts or PRDs own behavior, Figma owns visuals, and the repository owns structure. Never infer APIs, permissions, enums, submissions, or fallback data from Figma. For server-backed work, read [references/api-integration.md](references/api-integration.md) and complete a contract manifest for each interaction or independently releasable slice before editing that slice.
-4. **Implement in slices.** Load `figma-implement-design`; use the owning component system and original assets when no shared icon fits. Put frontend-owned copy, validation, accessibility labels, and metadata in i18n. Modify only Simplified Chinese by default. Keep unconfirmed behavior unavailable and test confirmed behavior.
-5. **Validate the real route.** Read [references/verification-contract.md](references/verification-contract.md), load `playwright`, and check `zh-CN`, exact viewport, responsive behavior, interactions, assets, navigation, console/network, and account-state differences. Store useful artifacts under `output-tdd/`.
-6. **Validate touched scope.** Run the owning app's formatting, focused tests, typecheck, locale-path checks, and `git diff --check` from [references/fameex-web.md](references/fameex-web.md). Classify failures as introduced, pre-existing, or environmental.
-7. **Report evidence.** Load `superpowers:verification-before-completion`, or its fallback, and follow the final-response contract. Never claim parity, passing checks, or completion without fresh evidence.
+   Classify controls/assets as `reuse`, `adapt`, `promote`, or `local`; explain non-reuse.
+3. **Lock contracts.** PRD/backend owns behavior, Figma visuals, repository structure. Never infer APIs, permissions, enums, submissions, or production fallback data. For server-backed work, load [references/api-integration.md](references/api-integration.md) and complete a contract manifest for each interaction or independently releasable slice.
+4. **Implement.** Load `figma-implement-design`; use owning components and original assets. Put frontend copy, validation, accessibility labels, and metadata in i18n. Modify only Simplified Chinese by default. Keep unconfirmed behavior unavailable; test confirmed behavior.
+5. **Verify route.** Read [references/verification-contract.md](references/verification-contract.md), load `playwright`, and check `zh-CN`, exact viewport, responsive layout, interactions, assets, navigation, console/network, and account states. Store useful artifacts under `output-tdd/`.
+6. **Verify scope.** Run owning-app formatting, focused tests, typecheck, locale checks, and `git diff --check`; classify failures as introduced, pre-existing, or environmental.
+7. **Report evidence.** Load `superpowers:verification-before-completion` or fallback. Claim only freshly verified results.
 
-Code Connect is optional. Continue within confirmed scope when it is unavailable, a dependency can be bootstrapped, global checks have unrelated baseline failures, or work must be sliced. Report constraints instead of inventing behavior.
+Code Connect remains optional. Missing optional capability or unrelated baseline failure does not block confirmed slices.

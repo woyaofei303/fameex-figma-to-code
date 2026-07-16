@@ -16,7 +16,10 @@ An available skill from a personal directory, system bundle, or enabled plugin m
 ### Conditional
 
 - `skill-installer`: use only when a required or triggered skill is missing and an exact curated or GitHub source is known.
-- `lark-doc`: use when the requirement or PRD is a Lark Docx/Wiki URL. Read the document before mapping design or code. Its absence does not justify guessing the requirement.
+- `lark-doc` and `lark-sheets`: use for supplied Lark requirements and embedded Sheets; unresolved access blocks only dependent facts.
+- `grill-me`: use only when evidence cannot resolve a product decision and an interactive interview is needed.
+- `grill-with-docs`: use instead when repository context/glossary/ADR documents materially constrain that decision.
+- `prototype`: use only for a narrow unresolved logic or visual question; clean it up before production work.
 - `github:yeet`: use only when the user explicitly asks to commit, push, or publish the finished changes.
 
 ### Optional
