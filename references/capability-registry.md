@@ -20,6 +20,7 @@ An available skill from a personal directory, system bundle, or enabled plugin m
 - `grill-me`: use only when evidence cannot resolve a product decision and an interactive interview is needed.
 - `grill-with-docs`: use instead when repository context/glossary/ADR documents materially constrain that decision.
 - `prototype`: use only for a narrow unresolved logic or visual question; clean it up before production work.
+- `review`: use for a fixed-commit branch or release audit when Standards and Spec must be checked separately.
 - `github:yeet`: use only when the user explicitly asks to commit, push, or publish the finished changes.
 
 ### Optional

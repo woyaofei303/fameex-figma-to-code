@@ -11,12 +11,35 @@ product_sources:
     status: read | missing-permission
     embedded_resources: []
 
+history_sources:
+  - kind: git-commit | task-file | integration-record | session-summary
+    locator: <exact-ticket-branch-path-or-commit>
+    verified_against_current_repo: true | false
+    facts_used: []
+
 figma_sources:
   global_root: <figma-url>
   discovered_nodes:
     - node_id: <node-id>
       state: <visible-state>
       exact_implementation_node: true
+
+traceability:
+  - requirement_id: <stable-requirement-id>
+    requirement_status: mapped | ready | blocked | verified | excluded
+    product_source: <document-section-and-revision>
+    figma_nodes:
+      - node_id: <node-id>
+        state: <visible-state>
+    app: apps/admin | apps/web | other
+    route: <route>
+    api_status: not-required | waiting | documented | integrated | verified
+    api_contract: <reference-or-unresolved>
+    code_targets: []
+    analytics: []
+    acceptance: []
+    evidence: []
+    blocker: <none-or-specific-blocker>
 
 conflicts:
   - topic: <behavior-or-visual-conflict>
@@ -41,4 +64,9 @@ slices:
     acceptance: []
     evidence: []
     blockers: []
-    status: planned | ready | in-progress | blocked | verified
+    dependencies: []
+    owner: <frontend-owner>
+    development_status: planned | in-progress | verified | blocked
+    integration_status: not-required | waiting | in-progress | verified | blocked
+    regression_status: pending | verified | failed | blocked
+    release_status: not-ready | ready-with-known-risks | ready | released | rolled-back | verified

@@ -6,16 +6,19 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class CapabilityRegistryContractTest(unittest.TestCase):
-    def test_entry_loads_registry_before_work_and_resumes_original_task(self):
+    def test_entry_loads_compact_index_and_resumes_original_task(self):
         skill = (ROOT / 'SKILL.md').read_text()
         preflight = skill.split('## Workflow', 1)[0]
 
         for requirement in (
-            'references/capability-registry.md',
+            'references/capability-index.md',
             'required or triggered',
             'resume the original task',
         ):
             self.assertIn(requirement, preflight)
+
+        index = (ROOT / 'references/capability-index.md').read_text()
+        self.assertIn('references/capability-registry.md', index)
 
     def test_registry_classifies_skills_plugins_mcp_and_apps(self):
         registry = (ROOT / 'references/capability-registry.md').read_text()

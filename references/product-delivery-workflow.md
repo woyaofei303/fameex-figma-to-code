@@ -11,16 +11,17 @@ For the first pass, provide the product document, the global Figma root, reposit
 3. Use the global Figma root for discovery: inventory pages, states, dialogs, mobile/desktop variants, and exact node IDs. A canvas or section is not an exact implementation node.
 4. Read design context and screenshot for each exact implementation node selected for the next slice.
 5. Map routes, apps, existing components, services, i18n, tests, and likely ownership in the repository.
+6. When prior work is mentioned, search local history by exact ticket, branch, route, API, or file terms. Inspect relevant Git commits, generated task files, and available session/memory summaries; treat them as leads and verify drift-prone facts against the current repository. Record only the bounded sources used.
 
 Authority is explicit: product and backend contracts own behavior; Figma owns visual intent; the repository owns implementation structure; a real payload or user correction overrides earlier assumptions. Record conflicts before coding.
 
 ## Feature Manifest
 
-Create `docs-tdd/frontend-tasks/<feature>-manifest.yaml` from `assets/templates/feature-manifest.yaml`. Keep a Traceability entry for every requirement: PRD source/revision, exact Figma state, app/route, API status, code target, acceptance, evidence, status, and blocker.
+Create `docs-tdd/frontend-tasks/<feature>-manifest.yaml` from `assets/templates/feature-manifest.yaml`. Record product, Figma, API, repository, and local history sources. Keep one Traceability entry per requirement: `requirement_status`, source/revision, exact Figma state, app/route, API, analytics, code target, acceptance, evidence, and blocker. A slice summary does not replace requirement-level traceability.
 
 Split work by independently verifiable **business slice**, not by screenshot. One slice may contain one route, several visible states, dialogs, APIs, analytics, and tests. The manifest lets later tasks load only the active slice instead of rereading the whole PRD and design file.
 
-API status is one of `not-required`, `waiting`, `documented`, `integrated`, or `verified`. With no confirmed API, implement only confirmed presentation/view-model behavior. Test fixtures and prototypes may use local data; production code must not use mock data, false success, or another production fallback.
+API status is one of `not-required`, `waiting`, `documented`, `integrated`, or `verified`. With no confirmed API, split out only an independently verifiable presentation/view-model sub-slice. The dependent work remains `waiting` and does not enter implementation. Test fixtures and prototypes may use local data; production code must not use mock data, false success, or another production fallback.
 
 When a feature spans configuration and consumption, complete Admin before Web if Admin defines data or rules consumed by Web. Independent slices may proceed in parallel only when their contracts do not depend on each other.
 
@@ -38,6 +39,17 @@ Inspect the PRD, Figma, code, and contracts first. Do not load any decision skil
 
 These tools do not run automatically, do not run together by default, and are not prerequisites. Their purpose is to resolve a specific uncertainty, not add ceremony or token cost.
 
+## Lifecycle and ownership
+
+Track Web, Admin, integration, and QA separately when they have different owners or evidence. For each requirement and slice, record four gates:
+
+- `development`: code and focused tests are complete in the owning app.
+- `integration`: the confirmed API contract and real-session network behavior are verified, or `not-required`.
+- `regression`: affected routes, states, apps, and acceptance items pass cross-slice review.
+- `release`: the fixed candidate commit passes [release readiness](release-readiness.md) and has an authorized deployment plan.
+
+Moving one gate forward never implies the next gate passed. Admin precedes Web when Web consumes Admin-configured rules; otherwise keep the tracks independent.
+
 ## Slice gate
 
 A slice enters implementation only when these are recorded:
@@ -48,12 +60,13 @@ A slice enters implementation only when these are recorded:
 4. API status plus contract manifest when server-backed.
 5. Product/Figma/code conflicts and their resolution or blocker.
 
-Then implement, verify the real route and network behavior, map tests/evidence back to acceptance, and update the Feature Manifest. A blocked slice stays blocked; confirmed sibling slices continue.
+Then implement, verify the real route and network behavior, map tests/evidence back to acceptance, and update the Feature Manifest. A blocked slice stays blocked; confirmed sibling slices continue. When all required slices reach regression, enter `release-readiness`; after an explicitly authorized deployment, enter `post-release-validation`.
 
 ## Compact flow
 
 ```text
 PRD and linked sources -> global Figma inventory -> repository map
 -> Feature Manifest -> business slices -> contract/API gate
--> implementation -> browser/network/tests -> acceptance evidence
+-> implementation -> integration -> cross-slice regression and review
+-> release readiness -> authorized deployment -> post-release evidence
 ```

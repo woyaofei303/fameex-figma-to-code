@@ -48,6 +48,17 @@ Reasoning: <short evidence-based mapping>
 
 Do not report a vague mismatch without an artifact and likely code location.
 
+## Claim Levels
+
+Use the narrowest claim supported by current evidence:
+
+- **Slice verified**: one manifest slice passed its focused code, route, and applicable API checks.
+- **Feature regression verified**: every required slice and affected cross-slice scenario passed; blockers and exclusions are explicit.
+- **Release ready**: the fixed candidate also passed [release readiness](release-readiness.md), including review, target build/CI, sign-offs, rollout, rollback, and monitoring.
+- **Released and verified**: an explicitly authorized deployment completed and its production-safe smoke plus observation evidence passed.
+
+A focused test, browser pass, verified slice, or Feature Manifest status alone does not prove release readiness. Never collapse these levels into a generic “complete”.
+
 ## Final Response Contract
 
 Return these sections in order:
@@ -75,3 +86,4 @@ Before claiming completion, verify:
 - Frontend-owned copy, validation, accessibility labels, and metadata use i18n; Simplified Chinese source keys are complete; no other-language files were generated unless explicitly requested.
 - Exact-viewport and responsive evidence exists, or the concrete browser blocker is reported.
 - Every changed file is listed and fresh output supports every pass claim.
+- Feature-level, release-level, and post-release claims also satisfy their corresponding Claim Level; slice evidence cannot be promoted to a broader claim.

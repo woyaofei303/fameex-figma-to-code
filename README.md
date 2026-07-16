@@ -28,7 +28,8 @@
 
 ```text
 完整需求 + Figma 总入口 -> 页面/状态清单 -> 业务切片
--> 精确节点 + 接口合同 -> 开发 -> 联调 -> 验收证据
+-> 精确节点 + 接口合同 -> 开发 -> 联调 -> 回归审查
+-> 发布准入 -> 授权发布 -> 上线后验证
 ```
 
 三个决策工具默认不加载，只在证据仍无法解决问题时使用：
@@ -36,6 +37,14 @@
 - `grill-me`：没有现成领域文档，需要逐个确认产品选择。
 - `grill-with-docs`：仓库已有 `CONTEXT.md` 或 ADR，需要核对术语和长期决策。两种访谈方式二选一。
 - `prototype`：问题已经很具体，但需要用一个可运行的小实验验证。精确 Figma 已确定界面时，不再做 UI 原型；原型得出结论后必须删除或吸收。
+
+### 需求到上线的完整闭环
+
+联调完成不等于可以上线。切片完成开发和接口验证后，还要汇总做回归审查：一边检查是否符合仓库规范，一边检查是否真正满足需求、Figma、接口和验收项。
+
+进入发布准入时，要锁定候选 commit，确认目标环境构建和 CI、相关人员签收、发布窗口、回滚方案和监控负责人。生产部署必须得到明确授权，并走仓库或团队已有流程；Skill 不会自己猜发布命令。
+
+上线后再做安全冒烟、错误与指标观察，留下上线后验证证据。只有这一段也通过，整个需求才真正闭环。
 
 ## 适用场景
 
@@ -47,7 +56,7 @@
 
 ## Skill、插件、MCP 和应用清单
 
-这套流程不是把能找到的工具全装一遍。它先判断当前步骤需要什么能力：已经有可用能力就直接复用；确实缺失才安装；安装或配置完成后回到原任务继续做，而不是停在“工具装好了”。完整机器可读规则见 [`references/capability-registry.md`](./references/capability-registry.md)。
+这套流程不是把能找到的工具全装一遍。日常只读精简的 [`references/capability-index.md`](./references/capability-index.md)；能力缺失或真正触发时，才读取完整的 [`references/capability-registry.md`](./references/capability-registry.md)。安装或配置完成后会回到原任务，而不是停在“工具装好了”。
 
 ### 必需能力
 
@@ -71,6 +80,7 @@
 - **`lark-doc` / `lark-sheets`**：需求入口是飞书 / Lark 文档时使用；会继续读取相关表格和链接，权限不足的部分单独标记。
 - **`grill-me` / `grill-with-docs`**：只在现有证据无法解决关键选择时二选一，不作为每次开发的固定步骤。
 - **`prototype`**：只验证一个已经收窄的问题，结束后不保留临时代码。
+- **`review`**：发布前或审查已有分支时，分别检查仓库规范和需求实现。
 - **`github:yeet`**：用户明确要求提交、推送或发布到 GitHub 时使用。
 - **Figma Code Connect**：只在用户明确要建立或维护 Figma 组件与代码组件映射时使用，对应 `figma:figma-code-connect`。普通页面开发没有 Code Connect 也能继续。
 
@@ -197,6 +207,22 @@ Figma 总入口：<Figma 文件或页面链接>
 <带 node-id 的 Figma Design 链接>
 ```
 
+开发一个业务切片：
+
+```text
+使用 $fameex-figma-to-code 实现 Feature Manifest 中的切片：<slice-id>
+Manifest：<文件路径>
+```
+
+检查是否可以上线：
+
+```text
+使用 $fameex-figma-to-code 检查这个功能的 release-readiness：
+Feature Manifest：<文件路径>
+候选 commit：<commit SHA>
+目标环境：<仓库已有环境>
+```
+
 审查已有实现：
 
 ```text
@@ -216,14 +242,18 @@ https://www.figma.com/design/...?...&node-id=12645-358
 
 ## 完整执行流程
 
-1. **读产品**：读取主需求、内嵌表格和关联文档，整理范围、状态、权限和验收项。
+1. **读产品**：读取主需求、内嵌表格、关联文档和相关本地历史。
 2. **盘设计**：用 Figma 总入口找全页面和状态，再记录每个切片的精确节点。
 3. **看项目**：确认应用、路由、组件、接口、多语言和测试写法。
-4. **拆切片**：把需求、设计节点、代码位置、接口状态和验收项放进 Manifest。
-5. **解冲突**：产品管业务，Figma 管视觉，接口管数据；仍无法确定时才选用访谈或原型。
-6. **做开发**：每次实现一个能独立检查的切片，优先复用现有能力。
-7. **做联调**：接口未提供就标记等待，不把 mock 或假成功放进生产代码。
-8. **做验收**：打开真实路由，检查状态、交互、请求、测试和代码改动，再回写证据。
+4. **建清单**：逐条连接需求、设计状态、接口、代码、埋点、验收和证据。
+5. **拆切片**：按能独立验收的业务能力拆，不按截图数量拆。
+6. **解冲突**：产品管业务，Figma 管视觉，接口管数据；仍无法确定时才选用访谈或原型。
+7. **做开发**：每次实现一个切片，优先复用现有能力。
+8. **做联调**：接口未提供就保持等待，只实现不依赖接口的子切片。
+9. **做回归**：跨切片检查 Web、Admin、账号状态、语言、视口、接口和相邻流程。
+10. **做审查**：分别检查仓库规范和产品需求，处理发现的问题。
+11. **过发布门**：锁定 commit，检查构建、CI、签收、发布计划、回滚方案和监控。
+12. **上线后验证**：经明确授权发布后做安全冒烟和观察，决定保留、继续观察或回滚。
 
 ```mermaid
 flowchart TD
@@ -237,20 +267,28 @@ flowchart TD
   G --> F
   H --> F
   F --> I{"接口合同可用吗？"}
-  I -->|等待| J["只暂停依赖接口的部分"]
+  I -->|等待| J["依赖接口的部分保持 blocked"]
+  I -->|有独立子切片| O["只实现不依赖接口的子切片"]
   I -->|可用或不需要| K["实现业务切片"]
-  J --> K
+  O --> K
   K --> L["真实路由、网络、测试验收"]
   L --> M{"检查通过？"}
   M -->|否| K
-  M -->|是| N["回写 Manifest 和证据"]
+  M -->|是| N["跨切片回归与双轴审查"]
+  N --> P{"发布准入通过？"}
+  P -->|否| Q["修复或保持 not-ready"]
+  Q --> N
+  P -->|是| R["明确授权后走已有发布流程"]
+  R --> S["上线后冒烟、监控和回滚判断"]
+  S --> T["回写 Manifest、发布记录和证据"]
 ```
 
 遇到问题时，处理方式也很简单：
 
 - 工具缺失时，先补安装或配置，然后回到原任务。精确节点仍读不到，视觉部分先停。
-- 接口或业务不清楚时，只停下相关功能，其他已经确认的内容继续做。
+- 接口或业务不清楚时，依赖部分保持阻塞，只实现能独立验收的子切片。
 - 检查没有通过时，回到对应步骤修改并重新检查，不能直接宣布完成。
+- 发布准入未通过时保持 `not-ready`；没有明确授权时最多只能说“准备就绪”，不能执行生产发布。
 
 ## FameEX 工程规则
 
@@ -389,6 +427,10 @@ OAuth 授权需要用户确认，Codex 可以发起登录并打开授权流程�
 - 新文案只补充简体中文。
 - 聚焦测试负责锁住游客状态、资格边界、禁用提交和多语言路径。验证数字以命令的当前输出为准，不在案例里长期写死。
 
+后续联调还暴露出一个容易被忽略的边界：页面改完、接口接通、聚焦测试通过，只能说明对应开发切片和联调切片有证据，不能直接等同于“可以上线”。PR-01982 的历史经验已经沉淀进 Skill：Admin 配置影响 Web 展示时先联调 Admin；Admin 和 Web 在各自包上下文验证；仓库已有的类型错误与本次新增问题分开记录。
+
+准备上线前再进入 `release-readiness`：固定候选提交，补齐跨页面回归、双维度审查、目标环境构建或 CI、各方确认、发布窗口、回滚和监控。得到明确授权并通过项目现有发布流程后，才进入 `post-release-validation` 做生产安全冒烟、监控和保留/观察/回滚判断。
+
 Figma 案例：
 
 [「FameEX 三期」WEB - VIP 实物礼包](https://www.figma.com/design/KzvWxAYxqfgpoiYuKdxMAE/%E3%80%8CFameEX%E4%B8%89%E6%9C%9F%E3%80%8D----WEB?node-id=12645-358&m=dev)
@@ -417,6 +459,8 @@ cd /Users/julian/fameex-figma-to-code
 - Skill、插件、MCP、应用分类和“补齐后继续原任务”的静态合同检查。
 - Figma MCP 注册、OAuth、重复配置选择和运行时刷新边界的静态合同检查。
 - 可选接口联调引用、契约字段、分应用测试命令和网络证据要求。
+- 产品需求、设计节点、接口、代码、验收证据的逐条追踪合同检查。
+- 跨切片回归、双维度审查、发布准备、回滚和上线后验证的静态合同检查。
 
 再检查运行环境：
 
@@ -434,6 +478,7 @@ SKILL.md                 Agent 执行入口
 README.md                人类使用说明，不作为 Agent 执行入口
 agents/openai.yaml       Skill 列表和默认提示词元数据
 references/              FameEX 规则、已有实现审计与验收合同
+assets/templates/        需求追踪和发布准备的可复用模板
 scripts/                 复用、i18n 和依赖检查脚本及测试
 assets/fallback-skills/  缺失依赖的安全兜底
 ```
@@ -441,10 +486,12 @@ assets/fallback-skills/  缺失依赖的安全兜底
 ## 进一步阅读
 
 - [`SKILL.md`](./SKILL.md)：完整执行流程。
-- [`references/capability-registry.md`](./references/capability-registry.md)：所有 Skill、插件、MCP 功能和应用的使用边界。
+- [`references/capability-index.md`](./references/capability-index.md)：默认加载的精简能力索引。
+- [`references/capability-registry.md`](./references/capability-registry.md)：需要安装、配置或判断边界时再读的完整能力清单。
 - [`references/dependency-bootstrap.md`](./references/dependency-bootstrap.md)：缺失依赖的安装、配置和原任务恢复流程。
 - [`references/fameex-web.md`](./references/fameex-web.md)：FameEX Web 组件、Icon、多语言和验证规则。
 - [`references/api-integration.md`](./references/api-integration.md)：真实查询、变更、上传和后端状态的接口联调规则。
 - [`references/product-delivery-workflow.md`](./references/product-delivery-workflow.md)：从完整需求和 Figma 总入口拆到业务切片、接口与验收的流程。
 - [`references/existing-implementation-audit.md`](./references/existing-implementation-audit.md)：已有分支的审计流程。
+- [`references/release-readiness.md`](./references/release-readiness.md)：从联调完成到发布准备、上线验证和回滚的流程。
 - [`references/verification-contract.md`](./references/verification-contract.md)：浏览器证据与最终交付合同。
