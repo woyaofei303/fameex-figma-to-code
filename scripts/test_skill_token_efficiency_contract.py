@@ -52,6 +52,34 @@ class SkillTokenEfficiencyContractTest(unittest.TestCase):
         )
         self.assertIn('验证数字以命令的当前输出为准', readme)
 
+    def test_readme_explains_problem_purpose_and_execution_flow(self):
+        readme_path = ROOT / 'README.md'
+        if not readme_path.exists():
+            self.skipTest('installed runtime bundle does not include README.md')
+        readme = readme_path.read_text()
+
+        headings = (
+            '## 这套 Skill 解决什么问题',
+            '## 核心目的',
+            '## 完整执行流程',
+        )
+        for heading in headings:
+            self.assertIn(heading, readme)
+        self.assertLess(readme.index(headings[0]), readme.index(headings[1]))
+        self.assertLess(readme.index(headings[1]), readme.index(headings[2]))
+
+        for requirement in (
+            'flowchart TD',
+            '找对页面',
+            '看懂设计',
+            '不替业务做决定',
+            '用真实结果验收',
+            '视觉部分先停',
+            '其他有依据的修改可以继续',
+            '检查通过？',
+        ):
+            self.assertIn(requirement, readme)
+
 
 if __name__ == '__main__':
     unittest.main()
