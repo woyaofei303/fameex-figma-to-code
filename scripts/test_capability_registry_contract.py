@@ -46,6 +46,34 @@ class CapabilityRegistryContractTest(unittest.TestCase):
         ):
             self.assertIn(requirement, registry)
 
+    def test_engineering_capabilities_choose_one_compatible_provider(self):
+        index = (ROOT / 'references/capability-index.md').read_text()
+        registry = (ROOT / 'references/capability-registry.md').read_text()
+
+        for requirement in (
+            '`tdd` or `superpowers:test-driven-development`',
+            '`diagnosing-bugs`, `diagnose`, or `superpowers:systematic-debugging`',
+            '`code-review` or `review`',
+        ):
+            self.assertIn(requirement, index)
+            self.assertIn(requirement, registry)
+
+        for requirement in (
+            'Select one provider',
+            'visual-only',
+            'hard, intermittent, or performance',
+        ):
+            self.assertIn(requirement, registry)
+
+        for redundant_orchestration in (
+            '`implement`',
+            '`ask-matt`',
+            '`to-spec`',
+            '`to-tickets`',
+        ):
+            self.assertNotIn(redundant_orchestration, index)
+            self.assertNotIn(redundant_orchestration, registry)
+
     def test_registry_lists_figma_mcp_functions_and_write_boundaries(self):
         registry = (ROOT / 'references/capability-registry.md').read_text()
 
@@ -104,6 +132,9 @@ class CapabilityRegistryContractTest(unittest.TestCase):
             'superpowers@openai-curated',
             'lark-doc',
             'Code Connect',
+            'test-driven-development',
+            'diagnosing-bugs',
+            'code-review',
             '没有必须安装的 App 或 Connector',
         ):
             self.assertIn(requirement, readme)

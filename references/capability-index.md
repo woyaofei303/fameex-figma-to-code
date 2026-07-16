@@ -14,7 +14,9 @@ Read this compact index before work. Load the full [capability registry](capabil
 - Lark PRD or embedded Sheet: `lark-doc` / `lark-sheets`.
 - Missing exact dependency: `skill-installer` or bundled fallback.
 - Unresolved decision: one of `grill-me` / `grill-with-docs`; then `prototype` only for a narrow experiment.
-- Release/branch audit: `review` when its two-axis workflow is needed.
+- Confirmed new or changed behavior: `tdd` or `superpowers:test-driven-development`; skip visual-only work.
+- Hard, intermittent, or performance failure: `diagnosing-bugs`, `diagnose`, or `superpowers:systematic-debugging`.
+- Release/branch audit: `code-review` or `review` when its two-axis workflow is needed.
 - Explicit commit, push, or publish request: `github:yeet`.
 - Explicit Code Connect work: `figma:figma-code-connect`.
 

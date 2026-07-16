@@ -63,7 +63,7 @@ class ReleaseReadinessContractTest(unittest.TestCase):
             self.assertIn(requirement, release)
 
         self.assertIn('assets/templates/release-readiness.yaml', release)
-        self.assertIn('`review`', registry)
+        self.assertIn('`code-review` or `review`', registry)
 
     def test_feature_manifest_traces_each_requirement_and_local_history(self):
         workflow = (ROOT / 'references/product-delivery-workflow.md').read_text()

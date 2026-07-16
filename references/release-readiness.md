@@ -36,7 +36,7 @@ Review the fixed diff on two independent axes:
 - **Standards axis**: AGENTS/CONTRIBUTING/context/ADR and owning-app conventions.
 - **Spec axis**: PRD revision, Feature Manifest Traceability, Figma states, API contracts, acceptance, and explicit user corrections.
 
-Load `review` when available and give it the fixed point plus these sources. If it is unavailable, keep the same two result slots and perform the bounded checks directly. No unresolved P0/P1 or unowned finding may pass the gate.
+Load one usable `code-review` or `review` provider and give it the fixed point plus these sources. If neither is usable, keep the same two result slots and perform the bounded checks directly. No unresolved P0/P1 or unowned finding may pass the gate.
 
 ## Build, CI, and sign-offs
 

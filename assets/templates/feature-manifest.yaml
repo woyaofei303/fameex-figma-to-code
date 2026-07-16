@@ -61,6 +61,8 @@ slices:
     code_targets: []
     api_status: not-required | waiting | documented | integrated | verified
     api_contract: <reference-or-unresolved>
+    test_seams:
+      - <public-behavior-boundary-or-not-required>
     acceptance: []
     evidence: []
     blockers: []

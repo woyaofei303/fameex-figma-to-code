@@ -71,11 +71,15 @@ class ProductDeliveryWorkflowContractTest(unittest.TestCase):
             'requirements:',
             'figma_nodes:',
             'api_status:',
+            'test_seams:',
             'acceptance:',
             'evidence:',
             'blockers:',
         ):
             self.assertIn(requirement, template)
+
+        workflow = (ROOT / 'references/product-delivery-workflow.md').read_text()
+        self.assertIn('test seam', workflow)
 
     def test_readme_explains_feature_intake_and_optional_tools_concisely(self):
         readme_path = ROOT / 'README.md'

@@ -17,7 +17,7 @@ Authority is explicit: product and backend contracts own behavior; Figma owns vi
 
 ## Feature Manifest
 
-Create `docs-tdd/frontend-tasks/<feature>-manifest.yaml` from `assets/templates/feature-manifest.yaml`. Record product, Figma, API, repository, and local history sources. Keep one Traceability entry per requirement: `requirement_status`, source/revision, exact Figma state, app/route, API, analytics, code target, acceptance, evidence, and blocker. A slice summary does not replace requirement-level traceability.
+Create `docs-tdd/frontend-tasks/<feature>-manifest.yaml` from `assets/templates/feature-manifest.yaml`. Record product, Figma, API, repository, and local history sources. Keep one Traceability entry per requirement: `requirement_status`, source/revision, exact Figma state, app/route, API, analytics, code target, acceptance, evidence, and blocker. Record each slice's public test seam for confirmed behavior, or `not-required` for visual-only work. A slice summary does not replace requirement-level traceability.
 
 Split work by independently verifiable **business slice**, not by screenshot. One slice may contain one route, several visible states, dialogs, APIs, analytics, and tests. The manifest lets later tasks load only the active slice instead of rereading the whole PRD and design file.
 
@@ -59,6 +59,7 @@ A slice enters implementation only when these are recorded:
 3. Owning app, route, and reuse candidates.
 4. API status plus contract manifest when server-backed.
 5. Product/Figma/code conflicts and their resolution or blocker.
+6. Public test seam for confirmed new or changed behavior, or `not-required` for visual-only work.
 
 Then implement, verify the real route and network behavior, map tests/evidence back to acceptance, and update the Feature Manifest. A blocked slice stays blocked; confirmed sibling slices continue. When all required slices reach regression, enter `release-readiness`; after an explicitly authorized deployment, enter `post-release-validation`.
 

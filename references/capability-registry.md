@@ -2,6 +2,13 @@
 
 This registry tells the parent skill what each dependency does, when it is needed, and how to recover when it is absent. Resolve only a **required or triggered** capability. A similar name, a cached plugin, an MCP login, or an installed file is not enough; validate the capability in the current task.
 
+## Contents
+
+- [Classification](#classification)
+- [Plugin Providers](#plugin-providers)
+- [Figma MCP Function Catalog](#figma-mcp-function-catalog)
+- [Missing Capability Recovery](#missing-capability-recovery)
+
 ## Classification
 
 ### Required
@@ -20,7 +27,9 @@ An available skill from a personal directory, system bundle, or enabled plugin m
 - `grill-me`: use only when evidence cannot resolve a product decision and an interactive interview is needed.
 - `grill-with-docs`: use instead when repository context/glossary/ADR documents materially constrain that decision.
 - `prototype`: use only for a narrow unresolved logic or visual question; clean it up before production work.
-- `review`: use for a fixed-commit branch or release audit when Standards and Spec must be checked separately.
+- `tdd` or `superpowers:test-driven-development`: use for confirmed new or changed behavior after recording its test seam. Select one provider; visual-only work does not trigger TDD.
+- `diagnosing-bugs`, `diagnose`, or `superpowers:systematic-debugging`: use for a hard, intermittent, or performance failure after a focused check exposes the symptom. Select one provider; an ordinary Figma mismatch does not trigger diagnosis.
+- `code-review` or `review`: use for a fixed-commit branch or release audit when Standards and Spec must be checked separately. Select one provider and pass the fixed point plus the known spec sources.
 - `github:yeet`: use only when the user explicitly asks to commit, push, or publish the finished changes.
 
 ### Optional
@@ -49,7 +58,7 @@ The official Figma plugin, `figma@openai-curated`, can provide the Figma skills 
 codex plugin add figma@openai-curated
 ```
 
-The Superpowers plugin, `superpowers@openai-curated`, can provide the completion verifier:
+The Superpowers plugin, `superpowers@openai-curated`, can provide completion verification and conditional TDD or diagnosis providers:
 
 ```bash
 codex plugin add superpowers@openai-curated
