@@ -28,6 +28,110 @@
 - 补齐前端文案的简体中文 i18n，并把其他语言交给翻译人员。
 - 在接口或业务合同不完整时，避免伪造账号、资格、库存、提交成功或其他生产状态。
 
+## Skill、插件、MCP 和应用清单
+
+这套流程不是把能找到的工具全装一遍。它先判断当前步骤需要什么能力：已经有可用能力就直接复用；确实缺失才安装；安装或配置完成后回到原任务继续做，而不是停在“工具装好了”。完整机器可读规则见 [`references/capability-registry.md`](./references/capability-registry.md)。
+
+### 必需能力
+
+- **`figma`**：读取指定 Figma 节点的结构、截图、变量和原始素材。Skill 文件和 Figma MCP 是两件事，两者都要能用。
+- **`figma-implement-design`**：把已经确认的设计放进现有项目，遵守路由、组件、多语言和业务边界。
+- **`playwright`**：打开真实页面，检查布局、响应式、交互、跳转、请求、控制台和页面状态。
+- **`superpowers:verification-before-completion` 或 `verification-before-completion`**：要求拿最新检查结果说话，没有证据就不能声称完成。
+
+这些能力可能来自个人 Skill、系统 Skill 或已启用插件。名字来源不同没关系，只要能力完整、当前任务确实可调用，就不重复安装。
+
+常用的官方插件提供者是：
+
+- `figma@openai-curated`：提供 Figma 相关 Skill 和 MCP 集成。
+- `superpowers@openai-curated`：提供完成前验证等开发流程 Skill。
+
+插件只是能力来源，不是每次都要重新安装。先用 `codex plugin list` 看本机实际状态。
+
+### 条件使用和可选能力
+
+- **`skill-installer`**：只有必需或已经触发的 Skill 缺失，并且能确认准确安装来源时才使用。
+- **`lark-doc`**：需求入口是飞书 / Lark 文档时使用，先读需求再对照 Figma 和代码；文档没读到时不能凭印象补业务规则。
+- **`github:yeet`**：用户明确要求提交、推送或发布到 GitHub 时使用。
+- **Figma Code Connect**：只在用户明确要建立或维护 Figma 组件与代码组件映射时使用，对应 `figma:figma-code-connect`。普通页面开发没有 Code Connect 也能继续。
+
+Code Connect 通常还要求 Figma 组件已发布到团队组件库，并且账号套餐支持。读取已有映射可以帮助复用组件；新增映射会改动 Figma，必须得到用户明确授权。
+
+### Figma MCP 实际使用的功能
+
+正常页面开发会用到：
+
+- `whoami`：确认当前使用的 Figma 身份，服务端支持时才调用。
+- `get_design_context`：读取用户给出的精确节点结构，是开发前的必需证据。
+- `get_screenshot`：读取同一节点截图，用来核对真实视觉。
+- `get_metadata`：节点太大、上下文不完整或要继续定位子节点时使用。
+- `get_variable_defs`：设计上下文没有带全颜色、间距等变量时使用。
+- MCP 返回的素材地址：直接使用 Figma 原图和图标，不重新画一个相似版本。
+- `get_code_connect_map`：有现成 Code Connect 映射时读取，帮助找到代码里的对应组件。
+
+只有 Code Connect 任务才会用到：
+
+- `get_code_connect_suggestions`：找出可能需要映射的组件。
+- `get_context_for_code_connect`：读取生成 `.figma.ts` 映射需要的组件和代码上下文。
+- `add_code_connect_map`：把映射写回 Figma；这是外部写操作，只能在用户明确要求后执行。
+
+默认页面开发不会调用 `get_figjam`、`create_design_system_rules`、`get_strategy_for_mapping` 或 `send_get_strategy_response`。它们分别属于 FigJam、设计系统规则或特定 Code Connect 工作流，不应该因为工具存在就顺手执行。
+
+### 实际开发会用到的技巧
+
+- **同节点双证据**：结构和截图必须来自同一个 `node-id`，避免看着 A 节点却实现 B 节点。
+- **四级复用判断**：把组件和素材分成 `reuse`、`adapt`、`promote`、`local`，先复用，再决定是否局部实现。
+- **业务合同清单**：接口、权限、枚举、提交结果和后端状态必须能在 PRD、接口或代码里找到依据。
+- **分块推进**：只暂停证据不足的部分，已经确认的布局、组件或非视觉修复可以继续。
+- **真实路由验收**：不只看静态截图，还要检查语言、视口、交互、请求、控制台和账号状态。
+- **最新证据交付**：测试、格式检查、类型检查和页面验证都以本次实际输出为准。
+
+### 缺失时怎么补齐并继续
+
+处理顺序很固定：先查当前 Skill 清单和个人目录，再查已启用插件；确认真的缺失后，才用 `skill-installer`、官方插件或仓库自带的兜底脚本。不能因为看到了另一个同名目录就重复安装。
+
+官方插件缺失时：
+
+```bash
+codex plugin list
+codex plugin add figma@openai-curated
+codex plugin add superpowers@openai-curated
+```
+
+核心 Skill 仍缺失时，可按依赖说明运行兜底脚本：
+
+```bash
+/usr/bin/python3 <skill-root>/scripts/bootstrap_dependencies.py \
+  --dependency <fallback-name> \
+  --json
+```
+
+飞书文档能力缺失时：
+
+```bash
+npx skills add larksuite/cli -g -y
+lark-cli --help
+```
+
+Figma MCP 没配置时：
+
+```bash
+codex mcp add figmaremotemcp --url https://mcp.figma.com/mcp
+codex mcp login figmaremotemcp
+codex mcp list
+```
+
+装好 Skill 后会直接读取新安装的 `SKILL.md` 并继续当前任务。插件或 MCP 新增后，如果当前任务仍看不到新工具，就重启 Codex 或新建任务，重新加载父 Skill，再从刚才卡住的步骤继续。OAuth 等需要本人确认的授权不会静默代办。
+
+### 默认不会使用
+
+- 不用 `browser`、`chrome` 或 `computer-use` 代替 Figma 节点证据和 Playwright 验收。
+- 不用 `imagegen` 重做 Figma 已经提供的图片和图标。
+- 不用网页搜索替代用户给出的 Figma、PRD、接口合同和仓库代码。
+- 不会为了“以后可能用到”安装无关 Skill、插件或应用。
+
+正常 Figma-to-Code 流程**没有必须安装的 App 或 Connector**。只有用户给出的资料或明确动作依赖某个外部应用时，才单独启用对应能力。
+
 ## 准备与安装
 
 使用前需要：
@@ -283,6 +387,7 @@ cd /Users/julian/fameex-figma-to-code
 - i18n 静态引用扫描。
 - Customer Web `tdk` Metadata 归属和 namespace 前缀扫描。
 - 依赖补齐和不覆盖保护。
+- Skill、插件、MCP、应用分类和“补齐后继续原任务”的静态合同检查。
 - Figma MCP 注册、OAuth、重复配置选择和运行时刷新边界的静态合同检查。
 - 可选接口联调引用、契约字段、分应用测试命令和网络证据要求。
 
@@ -309,6 +414,8 @@ assets/fallback-skills/  缺失依赖的安全兜底
 ## 进一步阅读
 
 - [`SKILL.md`](./SKILL.md)：完整执行流程。
+- [`references/capability-registry.md`](./references/capability-registry.md)：所有 Skill、插件、MCP 功能和应用的使用边界。
+- [`references/dependency-bootstrap.md`](./references/dependency-bootstrap.md)：缺失依赖的安装、配置和原任务恢复流程。
 - [`references/fameex-web.md`](./references/fameex-web.md)：FameEX Web 组件、Icon、多语言和验证规则。
 - [`references/api-integration.md`](./references/api-integration.md)：真实查询、变更、上传和后端状态的接口联调规则。
 - [`references/existing-implementation-audit.md`](./references/existing-implementation-audit.md)：已有分支的审计流程。

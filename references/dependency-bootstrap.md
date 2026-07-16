@@ -2,6 +2,8 @@
 
 Load this reference when an accepted sub-skill is missing or the current task lacks that phase's required runtime capability. For Figma, missing structured-context or screenshot tools counts even when a `figma` skill is installed.
 
+Use [capability-registry.md](capability-registry.md) first to decide whether a capability is required, conditional, optional, or outside the default workflow. This file only explains recovery for a capability that has already been triggered.
+
 ## Capability Registry
 
 ```text
@@ -21,9 +23,10 @@ For each capability:
 
 1. Check the available-skills catalog for the accepted names.
 2. Check `$CODEX_HOME/skills/<fallback-name>/SKILL.md`.
-3. Check known system and plugin skills surfaced by the current runtime.
-4. If still missing, use `skill-installer` only when it resolves an exact curated or explicit GitHub source.
-5. If no exact install source exists, or installation fails, run the bundled fallback bootstrap.
+3. Check known system skills and the enabled providers shown by `codex plugin list`.
+4. If an accepted official plugin provides the capability, add only that provider and verify that it is enabled.
+5. If still missing, use `skill-installer` only when it resolves an exact curated or explicit GitHub source.
+6. If no exact install source exists, or installation fails, run the bundled fallback bootstrap.
 
 Do not perform a broad repository search for a similarly named skill and do not install a near-match.
 
@@ -56,14 +59,14 @@ The script never overwrites an existing directory. A non-zero exit means at leas
 
 ## Same-Turn Continuation
 
-New personal skills may not enter the runtime's automatic discovery catalog until a later turn. Do not pause solely for refresh. After a `created` result:
+New personal skills may not enter the runtime's automatic discovery catalog until a later turn. Do not pause solely for refresh. After any successful install or a `created` result:
 
 1. Open `<result.path>/SKILL.md`.
 2. Read it completely.
 3. Follow it as the required sub-skill for the current phase.
 4. Continue the original Figma-to-code task.
 
-This exception applies only to a newly created personal skill that can be read directly from disk. It does not prove that a newly registered MCP server has entered the current task's tool catalog.
+Direct reading applies only to a skill available on disk. A plugin or newly registered MCP server may require a catalog reload, Codex restart, or new task before its tools appear; after that refresh, reload the parent skill and resume the original task.
 
 ## Figma MCP Bootstrap
 

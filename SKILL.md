@@ -13,7 +13,7 @@ Require a Figma Design URL with `node-id`; accept an optional route or component
 
 Record the repository, worktree, branch, dirty state, owning app, route, locale namespace, and loaded skill root. Preserve unrelated changes. Stop for an invalid node, unrecoverable authentication, ambiguous target, unsafe overlap, or unknown destructive/external behavior.
 
-Before each sub-skill, check its availability and runtime capability. If the skill is missing or its runtime check fails—including when the current task lacks required Figma tools—read [references/dependency-bootstrap.md](references/dependency-bootstrap.md); never overwrite a skill directory. A `figma` skill, MCP registration, or OAuth alone is insufficient: require an authenticated exact-node read.
+Read [references/capability-registry.md](references/capability-registry.md) before work and resolve only required or triggered capabilities. If the skill is missing or required Figma tools fail, follow [references/dependency-bootstrap.md](references/dependency-bootstrap.md), validate the result, and resume the original task. Never overwrite a skill directory. A `figma` skill, MCP registration, or OAuth alone is insufficient: require an authenticated exact-node read in the current task.
 
 For an existing branch, select `audit-existing`, fix a merge-base, create a route/node/code manifest, and load [references/existing-implementation-audit.md](references/existing-implementation-audit.md).
 
