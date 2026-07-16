@@ -15,6 +15,7 @@ Read [references/capability-index.md](references/capability-index.md); resolve o
 
 Select one mode:
 
+- `exact-node-implementation`: bounded page/component from one exact Design node. Load [references/exact-node-workflow.md](references/exact-node-workflow.md); no Feature Manifest.
 - `feature-delivery`: complete a PRD or multi-page feature intake with its global design entry. Load [references/product-delivery-workflow.md](references/product-delivery-workflow.md), build the Feature Manifest, and do not code until slices and conflicts are mapped.
 - `slice-implementation`: load that manifest; require the slice's exact nodes, route, behavior, and API status.
 - `audit-existing`: fix a merge-base, create a route/node/code manifest, and load [references/existing-implementation-audit.md](references/existing-implementation-audit.md).

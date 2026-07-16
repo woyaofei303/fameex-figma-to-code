@@ -26,6 +26,11 @@
 
 之后按业务切片开发。一个切片可以包含一个路由的多个状态、弹窗、接口和验收项，不是“一张图写一次页面”。执行切片时直接从 Manifest 取得精确 `node-id`，不需要反复粘贴全部链接。单页小改则可以直接提供精确节点和目标路由。
 
+两种入口可以同时使用：
+
+- **精确节点直达**：只给带 `node-id` 的 Figma Design 链接，就按当前仓库定位页面或组件，不需要先创建 Feature Manifest；目标位置不唯一时才补充路由或文件。
+- **完整需求模式**：给 PRD 和 Figma 总入口，先盘点页面、状态、接口和验收，再生成 Manifest 并按业务切片推进。
+
 ```text
 完整需求 + Figma 总入口 -> 页面/状态清单 -> 业务切片
 -> 精确节点 + 接口合同 -> 开发 -> 联调 -> 回归审查
@@ -200,7 +205,7 @@ Figma 总入口：<Figma 文件或页面链接>
 仓库/分支：<目标仓库和分支>
 ```
 
-实现新页面：
+精确节点直达（原来的用法）：
 
 ```text
 使用 $fameex-figma-to-code 实现这个界面：
@@ -242,6 +247,8 @@ https://www.figma.com/design/...?...&node-id=12645-358
 
 ## 完整执行流程
 
+下面 12 步是完整需求模式。精确节点直达会跳过需求总盘点和 Manifest 初始化，从同节点证据、仓库定位、合同确认开始，后面的开发与验收规则保持一致。
+
 1. **读产品**：读取主需求、内嵌表格、关联文档和相关本地历史。
 2. **盘设计**：用 Figma 总入口找全页面和状态，再记录每个切片的精确节点。
 3. **看项目**：确认应用、路由、组件、接口、多语言和测试写法。
@@ -257,10 +264,14 @@ https://www.figma.com/design/...?...&node-id=12645-358
 
 ```mermaid
 flowchart TD
-  A["产品需求和 Figma 总入口"] --> B["读取需求、表格和关联文档"]
+  Z{"这次给了什么？"}
+  Z -->|"完整 PRD + Figma 总入口"| A["产品需求和 Figma 总入口"]
+  Z -->|"精确 node-id"| X["读取同节点证据并定位仓库目标"]
+  A --> B["读取需求、表格和关联文档"]
   B --> C["盘点 Figma 页面、状态和精确节点"]
   C --> D["映射仓库并生成 Feature Manifest"]
-  D --> E{"切片还有关键冲突吗？"}
+  D --> E{"还有关键冲突吗？"}
+  X --> E
   E -->|证据可解| F["记录结论"]
   E -->|需产品决定| G["二选一：grill-me / grill-with-docs"]
   E -->|需运行验证| H["可选 prototype"]
@@ -460,6 +471,7 @@ cd /Users/julian/fameex-figma-to-code
 - Figma MCP 注册、OAuth、重复配置选择和运行时刷新边界的静态合同检查。
 - 可选接口联调引用、契约字段、分应用测试命令和网络证据要求。
 - 产品需求、设计节点、接口、代码、验收证据的逐条追踪合同检查。
+- 精确节点直达与完整需求模式互不覆盖的兼容合同检查。
 - 跨切片回归、双维度审查、发布准备、回滚和上线后验证的静态合同检查。
 
 再检查运行环境：
@@ -492,6 +504,7 @@ assets/fallback-skills/  缺失依赖的安全兜底
 - [`references/fameex-web.md`](./references/fameex-web.md)：FameEX Web 组件、Icon、多语言和验证规则。
 - [`references/api-integration.md`](./references/api-integration.md)：真实查询、变更、上传和后端状态的接口联调规则。
 - [`references/product-delivery-workflow.md`](./references/product-delivery-workflow.md)：从完整需求和 Figma 总入口拆到业务切片、接口与验收的流程。
+- [`references/exact-node-workflow.md`](./references/exact-node-workflow.md)：只提供精确 Figma 节点时的轻量单页流程。
 - [`references/existing-implementation-audit.md`](./references/existing-implementation-audit.md)：已有分支的审计流程。
 - [`references/release-readiness.md`](./references/release-readiness.md)：从联调完成到发布准备、上线验证和回滚的流程。
 - [`references/verification-contract.md`](./references/verification-contract.md)：浏览器证据与最终交付合同。

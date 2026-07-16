@@ -1,4 +1,4 @@
 interface:
   display_name: "FameEX Figma to Code"
-  short_description: "Deliver FameEX features from PRD and exact Figma evidence"
-  default_prompt: "Use $fameex-figma-to-code to carry this product requirement and exact Figma evidence through implementation, integration, regression, release readiness, and post-release validation."
+  short_description: "Deliver FameEX exact-node pages and full product features"
+  default_prompt: "Use $fameex-figma-to-code to deliver either a bounded exact-node page or a full product feature from confirmed Figma and product evidence through implementation and verification."
