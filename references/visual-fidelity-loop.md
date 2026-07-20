@@ -1,0 +1,193 @@
+# Visual Fidelity Loop
+
+Load for visual implementation or visual audit after exact-node intake and
+repository mapping. This reference makes the existing asset, style, state, and
+browser contracts executable; it does not replace them.
+
+## Operating Rule
+
+Converge one section, one state, and one viewport at a time. Keep a row for the
+exact frame/node, section, state, viewport, implementation crop, measurements,
+overlay/difference evidence, and disposition. Do not advance while that row has
+an unexplained high-salience mismatch in artwork, crop, geometry, typography,
+state, or motion. Mark a missing source or runtime as blocked instead of
+silently accepting an approximation.
+
+## Evidence Gate
+
+Complete the exact-node asset/effect inventory before editing the section. The
+asset/effect inventory must cover foreground artwork, icons, masks, gradients,
+glows, shadows, pseudo-elements, clipping, and responsive/state variants.
+Reconcile each visible layer with an original asset, repository reuse,
+authoritative user replacement, or an explicitly pending placeholder.
+
+For the active row, record:
+
+```text
+exact node and screenshot
+asset/effect inventory entries
+style and geometry ledger entries
+expected state and data source
+actual section crop and measured values
+overlay/difference result
+open mismatch or pass evidence
+```
+
+An existing historical component is evidence for a reuse candidate, not for
+the target geometry. Re-measure it in the new route, state, and viewport.
+
+## Geometry and Sizing Ledger
+
+For every changed flex/grid container and every direct child that controls the
+result, classify the sizing or positioning intent as `fixed`, `fluid`,
+`intrinsic`, `anchored`, `scroll`, or `clipped`. Record:
+
+```text
+width/height rule and min/max-width
+flex-basis / flex-grow / flex-shrink or grid tracks
+wrap, alignment, distribution, and exact gap
+padding and first/last-child edge distance
+overflow owner and intended scroll axis
+breakpoint activation and measured bounding rect
+```
+
+The fact that a parent is adaptive does not imply that its children should
+stretch, use equal tracks, or use `justify-between`. Preserve an exact `gap`,
+intrinsic child width, fixed artwork size, or scroll lane when the design
+establishes it. Resolve the final Tailwind/computed value through
+`fameex-web.md`; never infer a numeric gap from the utility name.
+
+Do not use `overflow: hidden/clip`, scale, compressed typography, or hidden
+content to conceal a responsive fit failure. Clipping is valid only when the
+exact frame or asset composition establishes a crop/mask. Otherwise prove each
+critical child's bounding rect remains inside its intended container at every
+matrix width.
+
+For tables, rankings, or repeated-field layouts, record each column start,
+width, and column center. Compare every `th` with representative `td` cells,
+including the first/last row and content extremes such as long identifiers and
+different numeric widths. Record first/last column edge distances plus
+`scrollWidth` and `clientWidth`. A visually plausible first row or a
+three-column declaration alone does not prove equal distribution or alignment.
+
+## State × Viewport Contract
+
+Create a state × viewport matrix from exact frames plus confirmed
+business-reachable states. A correction to one component does not authorize
+copying its dimensions, color, line thickness, or token to a sibling; each
+component keeps its own exact-node evidence.
+
+For an ordered ladder, milestone, or other monotonic progress UI,
+define one canonical ordered-progress model. Derive the item state, highlighted connector
+endpoint, glow/background, icon, copy color, accessibility state, and both responsive branches
+from that single state source. Do not maintain independent index checks or percentages that
+can disagree. Verify first, middle, final, and every confirmed terminal state; label a
+combination without an exact frame as behavior evidence rather than exact-frame parity.
+
+## Width × Height Viewport Matrix
+
+Derive breakpoints from the active repository config. At minimum verify:
+
+```text
+every exact Figma viewport
+user-declared minimum and maximum supported widths
+breakpoint - 1 and breakpoint
+one representative intermediate width per responsive interval
+the width that reproduced a reported defect
+exact design height and any user-declared short viewport height
+```
+
+When a user declares both a supported width range and a short viewport height, pair that height with the minimum and maximum width of each responsive interval.
+Run the complete primary interaction at both endpoint pairs; do not satisfy the height
+and width requirements with disjoint viewport captures. This is an endpoint contract,
+not a requirement to test the full width × height Cartesian product.
+
+At the short viewport height, run the complete primary interaction rather than
+taking only a screenshot. Prove the correct page/modal scroll owner, close
+control, fixed CTA, final action, safe-area clearance, and focused/keyboard
+behavior are reachable. For intentional horizontal lanes, prove manual
+left/right scrolling and preserve the designed visible extent.
+
+Record `window.innerWidth` and
+`document.documentElement.clientWidth` for every browser comparison. Do not
+repair production CSS for a scrollbar or automation-only viewport difference.
+
+## Visibility-Triggered Motion
+
+For `IntersectionObserver` or any scroll reveal, record the actual scroll root
+and overflow owner plus configured `root`, `rootMargin`, and `threshold`.
+Verify:
+
+```text
+content initially visible in the viewport
+downward and upward entry
+exit and intended re-entry policy
+responsive root change
+computed opacity and transform before/during/after motion
+`unobserve` and `disconnect` behavior on completion or unmount
+reduced-motion and unsupported-observer behavior
+```
+
+Content must fail open as visible when observer setup, hydration, or reduced
+motion prevents the decoration from running. A reveal that succeeds only after
+scrolling from the page top, or leaves content permanently transparent, fails.
+
+## Asset Conversion Evidence
+
+Default: preserve SVG as vector unless an authoritative delivery constraint requires
+another format. Consider WebP for large raster assets only after the asset and
+composition evidence is locked; do not batch-convert merely by extension.
+
+For each candidate record:
+
+```text
+source and candidate path/hash
+encoder/settings and lossless/lossy mode
+intrinsic and rendered dimensions
+alpha presence/bounds and transparent padding
+before/after bytes and percentage saved
+Desktop/H5 crop or visual difference evidence
+accepted or rejected decision and reason
+```
+
+Do not trim transparent padding without composition evidence. Reject the
+candidate when alpha, crop, typography inside artwork, or another high-salience
+pixel changes. For transparency-bearing assets, inspect a per-pixel alpha/RGBA difference;
+alpha bounds alone are insufficient because colors or interior opacity can change inside
+unchanged bounds. Keep assets and locale ownership for a one-time activity inside its
+removal boundary so optimization does not leak page-bound files into shared packages.
+
+## Entry Surface Manifest
+
+Keep these surfaces separate:
+
+```text
+canonical page route
+operational exposure entry (banner, activity center, menu, or campaign slot)
+App WebView/deep link entry
+page-level CTA or share destination
+```
+
+For each surface record:
+
+```text
+owner, evidence source, configuration location, status, and acceptance evidence
+```
+
+Route existence does not prove an exposure entry or deeplink. A Figma screen proves
+presentation, not an operational placement. When PRD, repository, or App configuration
+does not establish a surface, mark it unresolved and must not infer it from another row;
+block only the dependent entry work.
+
+## Validation and Closeout
+
+Run focused tests and real-route evidence for the active row before widening the
+scope. For package typecheck, lint, or build failures, compare merge base and
+before/after results where practical, then classify every failure as
+`introduced`, `pre-existing`, or `environmental`. A focused test passing does
+not turn an unrelated failing typecheck into a pass.
+
+Close a row only when the exact asset/state/viewport is aligned, critical
+geometry is measured, interactions are observable, and no unexplained
+high-salience difference remains. Then move to the next row and finish with the
+full `verification-contract.md` regression and reporting contract.

@@ -18,6 +18,6 @@ Installing this fallback skill does not install or authenticate the Figma MCP se
 5. Fetch variables, assets, and Code Connect mappings when available.
 6. Start implementation only after structured context and a screenshot exist.
 
-Treat returned React/Tailwind as a design representation. Preserve project components, tokens, routing, state, and data patterns. Use Figma-provided assets; do not add icon packages or placeholders.
+Treat returned React/Tailwind as a design representation. Preserve project components, tokens, routing, state, and data patterns. Use Figma-provided assets and do not add icon packages. After a recorded retrieval failure, an obvious temporary placeholder is allowed only when the user permits iterative placeholder work; mark it pending and do not claim exact visual completion.
 
 Code Connect is optional. Record entitlement failures and continue with design context and screenshots.

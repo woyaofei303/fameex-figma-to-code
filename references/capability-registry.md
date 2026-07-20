@@ -77,7 +77,7 @@ The active `figma` skill owns exact tool names and arguments. Use the smallest s
 - `get_screenshot`: required visual evidence for the same node.
 - `get_metadata`: use when the target is too large, context is incomplete, or child-node discovery is needed.
 - `get_variable_defs`: use when tokens or variable values are not present in design context.
-- Figma asset URLs returned by MCP: use original icons and images instead of redrawing them; do not invent a placeholder when retrieval fails.
+- Figma asset URLs returned by MCP: use original icons and images instead of redrawing them. After a recorded retrieval failure, an obvious temporary placeholder is allowed only when the user permits iterative placeholder work; mark it pending and do not claim exact visual completion.
 - `get_code_connect_map`: read existing component mappings when exposed and useful for reuse.
 
 ### Code Connect only
