@@ -182,19 +182,18 @@ codex mcp list
 
 ```bash
 git clone ssh://git@github.com/woyaofei303/fameex-figma-to-code.git \
-  "${CODEX_HOME:-$HOME/.codex}/skills/fameex-figma-to-code"
+  /Users/julian/.codex/skills/fameex-figma-to-code
 ```
 
 如果目标目录已经存在，不要覆盖。先检查来源、分支和本地改动，再决定更新方式。
 
-当前维护环境区分两个路径：
+当前机器只维护一个目录，它同时是 Git 仓库和 Codex 实际加载的 Skill：
 
 ```text
-源码仓库：/Users/julian/fameex-figma-to-code
-运行时 Skill：/Users/julian/.codex/skills/fameex-figma-to-code
+/Users/julian/.codex/skills/fameex-figma-to-code
 ```
 
-在当前机器上先修改源码仓库，验证并提交后，再按需同步运行时文件。通过整仓 clone 安装时 README 会一起存在，但 Agent 只会按触发规则加载 `SKILL.md`。
+直接在该目录修改、验证、提交和推送，不创建第二份副本。通过整仓 clone 安装时 README 会一起存在，但 Agent 只会按触发规则加载 `SKILL.md`。
 
 ## 快速使用
 
@@ -362,7 +361,7 @@ Admin 聚焦测试必须在 `@fameex/admin` 包上下文运行，避免根目录
 ### 组件和资源复用候选
 
 ```bash
-SKILL_DIR="/Users/julian/fameex-figma-to-code"
+SKILL_DIR="/Users/julian/.codex/skills/fameex-figma-to-code"
 
 /usr/bin/python3 "$SKILL_DIR/scripts/audit_reuse.py" \
   --repo-root /Users/julian/fameex-web \
@@ -375,7 +374,7 @@ SKILL_DIR="/Users/julian/fameex-figma-to-code"
 ### i18n 引用完整性
 
 ```bash
-SKILL_DIR="/Users/julian/fameex-figma-to-code"
+SKILL_DIR="/Users/julian/.codex/skills/fameex-figma-to-code"
 
 /usr/bin/python3 "$SKILL_DIR/scripts/audit_i18n_lookups.py" \
   --namespace-json /absolute/path/to/zh-CN/namespace.json \
@@ -390,13 +389,57 @@ SKILL_DIR="/Users/julian/fameex-figma-to-code"
 ### 缺失依赖补齐
 
 ```bash
-SKILL_DIR="/Users/julian/fameex-figma-to-code"
+SKILL_DIR="/Users/julian/.codex/skills/fameex-figma-to-code"
 /usr/bin/python3 "$SKILL_DIR/scripts/bootstrap_dependencies.py" \
   --dependency <fallback-name> \
   --json
 ```
 
 脚本不会覆盖已存在的 Skill 目录。只有四项能力全部缺失时才省略 `--dependency`。详细规则见 [`references/dependency-bootstrap.md`](./references/dependency-bootstrap.md)。
+
+### 视觉证据清单
+
+从统一模板创建任务清单：
+
+```bash
+SKILL_DIR="/Users/julian/.codex/skills/fameex-figma-to-code"
+mkdir -p output-tdd/figma-audits/<task>
+cp "$SKILL_DIR/assets/templates/visual-evidence.json" \
+  output-tdd/figma-audits/<task>/visual-evidence.json
+```
+
+完成视觉验收前执行门禁：
+
+```bash
+/usr/bin/python3 "$SKILL_DIR/scripts/validate_visual_evidence.py" \
+  --manifest output-tdd/figma-audits/<task>/visual-evidence.json \
+  --repo-root <repo>
+```
+
+清单统一记录精确节点、必测 Desktop/H5、几何与 expected/actual computed style、素材和效果层、响应式矩阵、复用、用户纠正、入口、交互、WebP 比较以及接口状态。证据文件必须位于当前任务的审计目录；短屏完整交互使用带精确视口和步骤的 Playwright JSON，不能用截图或手填布尔值代替。校验不通过时不能声明视觉完成。
+
+### 历史与素材审计
+
+只有用户提到历史、返工或既有需求时，才搜索直接用户消息：
+
+```bash
+/usr/bin/python3 "$SKILL_DIR/scripts/search_codex_history.py" \
+  --ticket PR-02107 \
+  --route /contract-carnival \
+  --since 2026-06-01 \
+  --limit 50 \
+  --json
+```
+
+脚本仅读取历史并输出有限摘要，不复制原始会话。素材审计同样是只读的：
+
+```bash
+/usr/bin/python3 "$SKILL_DIR/scripts/audit_assets.py" \
+  --asset <absolute-asset-path> \
+  --json
+```
+
+没有逐像素比较能力时，WebP 候选保持 `unverified` 或 `rejected`，不能只按体积替换。标为 `accepted` 时，原图和候选图必须真实存在于仓库，比较 JSON 还要与两者的实际 hash、字节、尺寸、alpha 和 RGBA 统计一致。
 
 ### Figma MCP 首次配置
 
@@ -457,8 +500,21 @@ Figma 案例：
 先运行脚本单元测试：
 
 ```bash
-cd /Users/julian/fameex-figma-to-code
-/usr/bin/python3 -m unittest discover -s scripts -p 'test_*.py'
+cd /Users/julian/.codex/skills/fameex-figma-to-code
+PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3 -m unittest discover \
+  -s scripts -p 'test_*.py'
+/usr/bin/python3 /Users/julian/.codex/skills/.system/skill-creator/scripts/quick_validate.py .
+git diff --check
+git status --short
+```
+
+验证后直接在同一目录提交和推送当前分支：
+
+```bash
+cd /Users/julian/.codex/skills/fameex-figma-to-code
+git add <changed-files>
+git commit -m "feat: enforce visual evidence workflow"
+git push -u origin "$(git branch --show-current)"
 ```
 
 当前测试覆盖：
@@ -474,6 +530,7 @@ cd /Users/julian/fameex-figma-to-code
 - 可选接口联调引用、契约字段、分应用测试命令和网络证据要求。
 - 产品需求、设计节点、接口、代码、验收证据的逐条追踪合同检查。
 - 精确节点直达与完整需求模式互不覆盖的兼容合同检查。
+- 统一视觉证据清单、历史检索和素材元数据审计的可执行行为。
 - 跨切片回归、双维度审查、发布准备、回滚和上线后验证的静态合同检查。
 
 再检查运行环境：

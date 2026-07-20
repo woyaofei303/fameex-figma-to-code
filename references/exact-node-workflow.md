@@ -8,6 +8,19 @@ Use the exact node plus the current repository and worktree. Infer the owning ap
 
 Read structured context and a same-node screenshot, map the target and reuse candidates, then follow the parent workflow. Existing repository behavior and confirmed API contracts still own business behavior.
 
+Copy `assets/templates/visual-evidence.json` to
+`output-tdd/figma-audits/<task>/visual-evidence.json` and keep all frame,
+section, asset/effect, style, responsive, interaction, correction, and
+comparison evidence in that one canonical manifest. Exact-node mode does not
+create a Feature Manifest, but it uses the same visual evidence schema as
+feature delivery. Do not invent parallel evidence file formats.
+
+Populate `required_viewports` from every exact Figma frame, project breakpoint
+boundary, and user-declared viewport. A user correction such as `320x568` is a
+sourced requirement, not an optional sampling suggestion. For every changed
+layout owner, record sourced `expected` sizing/distribution/gap and measured
+`actual` values plus Tailwind and computed styles.
+
 ### Large Canvas Protocol
 
 When the supplied node is a large canvas, design board, or long page whose structured response is sparse or truncated, call `get_metadata` first. Locate the route-sized page and relevant state child frames, record their node IDs and dimensions, then fetch structured context and same-node screenshots for those child frames. Treat annotations, explorations, competitor references, dialogs, and alternative states as evidence—not as one deployable page or as page dimensions.
@@ -38,6 +51,20 @@ related parent node was already inspected. Use metadata to enumerate child
 visuals, retrieve their original exports, and reconcile them with the existing
 inventory. A partial structured response is not permission to recreate a
 missing icon, glow, mask, or illustration with approximate CSS.
+
+Audit each retrieved or user-supplied asset before accepting it:
+
+```bash
+/usr/bin/python3 <skill-root>/scripts/audit_assets.py \
+  --asset <absolute-asset-path> \
+  --json
+```
+
+The audit records format, hash, bytes, intrinsic dimensions, SVG viewBox, and
+alpha capability. It does not provide pixel/RGBA comparison evidence and never
+authorizes a conversion by itself. An accepted WebP keeps both source and
+candidate in the repository and binds a comparison JSON to their audited
+hashes, dimensions, byte counts, alpha capability, tool, and RGBA statistics.
 
 Extend the file inventory into a visual-layer inventory for every exact frame.
 Include visible artwork and support/effect layers, including fills, gradients,
@@ -84,6 +111,21 @@ Build a state matrix when the supplied nodes show variants or states. For each e
 
 When the user identifies a historical implementation, inspect its route and component tree before creating local UI. Reuse or extract the smallest compatible visual and interaction shell—layout, tabs, ranking presentation, animation engine, modal mechanics, or disclosure control. Keep domain APIs, DTOs, enums, task IDs, reward mappings, copy, and campaign artwork in their owning domain. If a pure capability is promoted, keep the historical page as a consumer and regression-test both routes.
 
+Only when the user mentions history, rework, or an existing requirement, search
+bounded direct-user history before repository inspection:
+
+```bash
+/usr/bin/python3 <skill-root>/scripts/search_codex_history.py \
+  --ticket <ticket> \
+  --route <route> \
+  --since <YYYY-MM-DD> \
+  --limit 50 \
+  --json
+```
+
+Treat excerpts as leads, not current truth. Do not copy raw sessions into the
+repository.
+
 Create a reference route/source map for every user-named reference. Record the
 historical route and matching viewport/state, source component, owning hook or
 animation/style primitive, source asset, requested visible part, and
@@ -101,4 +143,15 @@ Switch to `feature-delivery` when the requested scope expands to multiple routes
 
 ## Evidence
 
-Return the node/route/code mapping, changed files, focused tests, and real-route evidence. State unresolved business or API facts separately. Exact-node verification proves only the bounded scope; broader release claims still use the release modes.
+Before a visual completion claim, run:
+
+```bash
+/usr/bin/python3 <skill-root>/scripts/validate_visual_evidence.py \
+  --manifest output-tdd/figma-audits/<task>/visual-evidence.json \
+  --repo-root <repo>
+```
+
+Return the node/route/code mapping, changed files, focused tests, and real-route evidence.
+State unresolved business or API facts separately. Exact-node
+verification proves only the bounded scope; broader release claims still use
+the release modes.

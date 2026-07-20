@@ -24,6 +24,11 @@ figma_sources:
       state: <visible-state>
       exact_implementation_node: true
 
+visual_evidence:
+  manifest: output-tdd/figma-audits/<task>/visual-evidence.json
+  validation_status: pending | passed | failed
+  last_validated_at: <iso-8601-or-null>
+
 traceability:
   - requirement_id: <stable-requirement-id>
     requirement_status: mapped | ready | blocked | verified | excluded

@@ -21,6 +21,20 @@ glows, shadows, pseudo-elements, clipping, and responsive/state variants.
 Reconcile each visible layer with an original asset, repository reuse,
 authoritative user replacement, or an explicitly pending placeholder.
 
+Use only the canonical manifest copied from
+`assets/templates/visual-evidence.json` to
+`output-tdd/figma-audits/<task>/visual-evidence.json`. Its rows replace
+task-invented YAML ledgers or evidence formats. Supporting crops, measurements,
+and differences remain separate files, but every artifact is referenced by the
+canonical manifest.
+
+All verified artifacts stay under that task audit directory. Populate
+`required_viewports` from exact frames, repository breakpoints, and user
+corrections; the validator must find a matching responsive row for each. In
+each section sizing row, compare sourced `expected` intent, distribution, and
+gap with measured `actual` values. A passing status cannot override different
+values such as `gap` versus `justify-between` or `fluid` versus `fixed`.
+
 For the active row, record:
 
 ```text
@@ -108,6 +122,12 @@ control, fixed CTA, final action, safe-area clearance, and focused/keyboard
 behavior are reachable. For intentional horizontal lanes, prove manual
 left/right scrolling and preserve the designed visible extent.
 
+The interaction artifact is JSON produced from the Playwright run and records
+`source: playwright`, the exact width/height, passed status, and matching
+trigger, scroll owner, close control, final action, safe-area, and horizontal
+scroll steps. A screenshot or hand-set manifest booleans alone do not satisfy
+this evidence.
+
 Record `window.innerWidth` and
 `document.documentElement.clientWidth` for every browser comparison. Do not
 repair production CSS for a scrollbar or automation-only viewport difference.
@@ -157,6 +177,23 @@ alpha bounds alone are insufficient because colors or interior opacity can chang
 unchanged bounds. Keep assets and locale ownership for a one-time activity inside its
 removal boundary so optimization does not leak page-bound files into shared packages.
 
+Use `scripts/audit_assets.py` to collect zero-dependency metadata before making
+a conversion decision. When a pixel/RGBA comparator is unavailable, keep the
+candidate `unverified` or `rejected`; byte savings and matching dimensions are
+not visual proof. For `accepted`, source and candidate must exist inside the
+repository. The validator audits both files directly, then requires a
+task-scoped comparison JSON whose `source_sha256`, `candidate_sha256`, tool,
+status, RGBA pixel count, channel delta, and alpha-difference fields match the
+audited files. Manifest-reported bytes or dimensions alone are not accepted.
+
+## User Correction Ledger
+
+When the user reports a visual, layout, responsive, asset, state, or motion
+defect, add a correction row with a bounded source locator and every affected
+frame/section/viewport row. Fixing one screenshot does not close the correction.
+Re-run the affected historical rows and attach fresh comparison evidence before
+marking it closed.
+
 ## Entry Surface Manifest
 
 Keep these surfaces separate:
@@ -186,6 +223,14 @@ scope. For package typecheck, lint, or build failures, compare merge base and
 before/after results where practical, then classify every failure as
 `introduced`, `pre-existing`, or `environmental`. A focused test passing does
 not turn an unrelated failing typecheck into a pass.
+
+Run the canonical gate before any visual completion statement:
+
+```bash
+/usr/bin/python3 <skill-root>/scripts/validate_visual_evidence.py \
+  --manifest output-tdd/figma-audits/<task>/visual-evidence.json \
+  --repo-root <repo>
+```
 
 Close a row only when the exact asset/state/viewport is aligned, critical
 geometry is measured, interactions are observable, and no unexplained

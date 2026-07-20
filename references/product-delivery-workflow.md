@@ -11,13 +11,40 @@ For the first pass, provide the product document, the global Figma root, reposit
 3. Use the global Figma root for discovery: inventory pages, states, dialogs, mobile/desktop variants, and exact node IDs. A canvas or section is not an exact implementation node.
 4. Read design context and screenshot for each exact implementation node selected for the next slice.
 5. Map routes, apps, existing components, services, i18n, tests, and likely ownership in the repository.
-6. When prior work is mentioned, search local history by exact ticket, branch, route, API, or file terms. Inspect relevant Git commits, generated task files, and available session/memory summaries; treat them as leads and verify drift-prone facts against the current repository. Record only the bounded sources used.
+6. Only when the user mentions prior work, rework, or an existing requirement,
+   search direct-user history with the bounded, read-only helper:
+
+   ```bash
+   /usr/bin/python3 <skill-root>/scripts/search_codex_history.py \
+     --ticket <ticket> \
+     --route <route> \
+     --since <YYYY-MM-DD> \
+     --limit 50 \
+     --json
+   ```
+
+   Search by the exact ticket and route; add repeatable `--term` values for a
+   branch, API, or file. Inspect relevant Git commits and generated task files;
+   treat excerpts as leads and verify drift-prone facts against the current repository.
+   Never persist raw sessions in the feature repository.
 
 Authority is explicit: product and backend contracts own behavior; Figma owns visual intent; the repository owns implementation structure; a real payload or user correction overrides earlier assumptions. Record conflicts before coding.
 
 ## Feature Manifest
 
-Create `docs-tdd/frontend-tasks/<feature>-manifest.yaml` from `assets/templates/feature-manifest.yaml`. Record product, Figma, API, repository, and local history sources. Keep one Traceability entry per requirement: `requirement_status`, source/revision, exact Figma state, app/route, API, analytics, code target, acceptance, evidence, and blocker. Record each slice's public test seam for confirmed behavior, or `not-required` for visual-only work. A slice summary does not replace requirement-level traceability.
+Create `docs-tdd/frontend-tasks/<feature>-manifest.yaml` from
+`assets/templates/feature-manifest.yaml`. Copy
+`assets/templates/visual-evidence.json` to
+`output-tdd/figma-audits/<task>/visual-evidence.json` and reference that path
+from `visual_evidence`; feature and exact-node modes use the same visual
+schema. Fill `required_viewports` from exact frames, repository boundaries, and
+user corrections; keep sourced expected/actual sizing rows for changed layout
+owners. Record product, Figma, API, repository, and bounded local history
+sources. Keep one Traceability entry per requirement: `requirement_status`,
+source/revision, exact Figma state, app/route, API, analytics, code target,
+acceptance, evidence, and blocker. Record each slice's public test seam for
+confirmed behavior, or `not-required` for visual-only work. A slice summary
+does not replace requirement-level traceability.
 
 Split work by independently verifiable **business slice**, not by screenshot. One slice may contain one route, several visible states, dialogs, APIs, analytics, and tests. The manifest lets later tasks load only the active slice instead of rereading the whole PRD and design file.
 
@@ -62,6 +89,18 @@ A slice enters implementation only when these are recorded:
 6. Public test seam for confirmed new or changed behavior, or `not-required` for visual-only work.
 
 Then implement, verify the real route and network behavior, map tests/evidence back to acceptance, and update the Feature Manifest. A blocked slice stays blocked; confirmed sibling slices continue. When all required slices reach regression, enter `release-readiness`; after an explicitly authorized deployment, enter `post-release-validation`.
+
+Before marking visual evidence passed, run:
+
+```bash
+/usr/bin/python3 <skill-root>/scripts/validate_visual_evidence.py \
+  --manifest output-tdd/figma-audits/<task>/visual-evidence.json \
+  --repo-root <repo>
+```
+
+An unresolved API can coexist with a verified presentation slice, but the
+validator rejects a complete-function or release claim until that contract is
+resolved.
 
 ## Compact flow
 

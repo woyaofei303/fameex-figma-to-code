@@ -24,7 +24,7 @@ Select one mode:
 
 ## Workflow
 
-1. **Collect evidence.** Load `figma`; fetch structured context and same-node screenshot. Capture hierarchy, constraints, tokens, copy, states, navigation, assumptions, and unknowns. For large canvases, locate child frames before detailed context. Inventory each frame's assets/effect layers before layout edits.
+1. **Collect evidence.** Load `figma`; fetch structured context and same-node screenshot. Capture hierarchy, constraints, tokens, copy, states, navigation, assumptions, and unknowns. For large canvases, locate child frames before detailed context. Inventory visible layers before layout edits.
 2. **Map code.** Read [references/fameex-web.md](references/fameex-web.md); inspect route, shell, adjacent code, state, i18n, tests, responsive patterns, and active Tailwind presets before choosing utilities. For uncertain styles, follow its config-to-computed-value protocol. Run:
 
    ```bash
@@ -33,10 +33,10 @@ Select one mode:
 
    Classify controls/assets as `reuse`, `adapt`, `promote`, or `local`; explain non-reuse.
 3. **Lock contracts.** PRD/backend owns behavior, Figma visuals, repository structure. Never infer APIs, permissions, enums, submissions, or production fallback data. For server-backed work, load [references/api-integration.md](references/api-integration.md) and complete a contract manifest for each interaction or independently releasable slice.
-4. **Implement.** Load `figma-implement-design` and [references/visual-fidelity-loop.md](references/visual-fidelity-loop.md). Converge one section, one state, and one viewport at a time. Use components/assets. Put copy and labels in i18n; change only Simplified Chinese. Keep unconfirmed behavior unavailable.
+4. **Implement.** Load `figma-implement-design` and [references/visual-fidelity-loop.md](references/visual-fidelity-loop.md). Create its canonical `visual-evidence.json`; converge one section, one state, and one viewport at a time. Use components/assets. Put copy and labels in i18n; change only Simplified Chinese. Keep unconfirmed behavior unavailable.
 5. **Verify route.** Read [references/verification-contract.md](references/verification-contract.md), load `playwright`, and check `zh-CN`, exact viewport, responsive layout, interactions, assets, navigation, console/network, and account states. Store useful artifacts under `output-tdd/`.
 6. **Verify scope.** Run owning-app formatting, focused tests, typecheck, locale checks, and `git diff --check`; classify failures as introduced, pre-existing, or environmental.
 7. **Close the feature.** Slice verification is not release readiness. Use `release-readiness` for cross-slice regression, review, build/CI, sign-offs, rollout, rollback, and monitoring; use `post-release-validation` after deployment.
 8. **Report evidence.** Load `superpowers:verification-before-completion` or fallback. Claim only freshly verified results.
 
-Code Connect remains optional. Missing optional capability or unrelated baseline failure does not block confirmed slices.
+Code Connect remains optional.
