@@ -35,6 +35,28 @@ each section sizing row, compare sourced `expected` intent, distribution, and
 gap with measured `actual` values. A passing status cannot override different
 values such as `gap` versus `justify-between` or `fluid` versus `fixed`.
 
+Completion artifacts are typed evidence, not opaque files:
+
+```text
+structured context: JSON with source=figma-mcp, passed status, file_key, node_id
+same-node screenshot, crop, difference, correction: valid PNG/JPEG/WebP
+geometry and style: passed Playwright JSON for the matching section IDs
+layer composition: passed Figma MCP or Playwright JSON naming the layer IDs
+table: passed Playwright JSON matching columns, edges, scroll/client widths
+motion: passed Playwright JSON matching kind, lifecycle, and observer fields
+historical reuse and entry surfaces: passed source JSON naming the collection
+```
+
+JSON labels alone are not sufficient: the validator also reconciles their
+identity and measured fields with the manifest and binds their hashes in the
+receipt. Evidence generated outside the named source must remain pending.
+
+Schema `1.x` manifests are historical drafts only. To migrate, copy the current
+`2.0` template, fill `task.target_paths` and the expanded table, motion,
+historical-reuse, and entry-surface fields, recapture typed artifacts, run
+`--draft`, then generate a new receipt. Never copy a v1 verified status forward
+or edit an old receipt into the new shape.
+
 For the active row, record:
 
 ```text
@@ -148,6 +170,12 @@ computed opacity and transform before/during/after motion
 reduced-motion and unsupported-observer behavior
 ```
 
+Record `reentry_policy` as `once` or `repeat`, then record
+`reentry_verified` separately. Verification booleans prove the behavior was
+checked; they must not encode the behavior's configured value. Apply the same
+`*_verified` naming to entry direction, exit, responsive-root, cleanup, and
+fallback checks.
+
 Content must fail open as visible when observer setup, hydration, or reduced
 motion prevents the decoration from running. A reveal that succeeds only after
 scrolling from the page top, or leaves content permanently transparent, fails.
@@ -177,14 +205,30 @@ alpha bounds alone are insufficient because colors or interior opacity can chang
 unchanged bounds. Keep assets and locale ownership for a one-time activity inside its
 removal boundary so optimization does not leak page-bound files into shared packages.
 
-Use `scripts/audit_assets.py` to collect zero-dependency metadata before making
-a conversion decision. When a pixel/RGBA comparator is unavailable, keep the
-candidate `unverified` or `rejected`; byte savings and matching dimensions are
-not visual proof. For `accepted`, source and candidate must exist inside the
-repository. The validator audits both files directly, then requires a
-task-scoped comparison JSON whose `source_sha256`, `candidate_sha256`, tool,
-status, RGBA pixel count, channel delta, and alpha-difference fields match the
-audited files. Manifest-reported bytes or dimensions alone are not accepted.
+Use `scripts/audit_assets.py` to collect zero-dependency header metadata before
+making a conversion decision. Its `alpha_encoding_signaled` field means only
+that the container can encode alpha; it does not prove that decoded pixels are
+transparent or unchanged.
+
+Generate the comparison artifact from the real source and candidate files:
+
+```bash
+/usr/bin/python3 <skill-root>/scripts/compare_assets_rgba.py \
+  --source <source-asset> \
+  --candidate <candidate.webp> \
+  --output output-tdd/figma-audits/<task>/asset-difference.json
+```
+
+Only the decoded-pixel `lossless-exact` policy can authorize `accepted`.
+The comparator tries Pillow first and falls back to the macOS image decoder
+when needed. The sips-only path requires an 8-bit decoded PNG; use a
+WebP-capable Pillow decoder for 16-bit sources. When no backend can decode both
+files, keep the candidate `unverified` or `rejected`. Byte savings, matching
+dimensions, header metadata, and
+hand-authored zero deltas are not visual proof. Source and candidate must exist
+inside the repository. The validator decodes and compares them again, then
+requires the task-scoped comparison JSON to match the actual hashes, dimensions,
+pixel counts, RGBA deltas, alpha statistics, decoder, tool, and policy.
 
 ## User Correction Ledger
 
@@ -224,13 +268,38 @@ before/after results where practical, then classify every failure as
 `introduced`, `pre-existing`, or `environmental`. A focused test passing does
 not turn an unrelated failing typecheck into a pass.
 
-Run the canonical gate before any visual completion statement:
+Use `--draft` only while filling the schema; a draft pass is never completion
+evidence:
 
 ```bash
 /usr/bin/python3 <skill-root>/scripts/validate_visual_evidence.py \
   --manifest output-tdd/figma-audits/<task>/visual-evidence.json \
+  --repo-root <repo> \
+  --draft
+```
+
+Before a visual completion statement, `output-tdd/` must be ignored by Git and
+the manifest must list explicit `target_paths`. Freeze the intended worktree
+snapshot, then use `--write-receipt` to generate and immediately recheck the
+canonical receipt:
+
+```bash
+/usr/bin/python3 <skill-root>/scripts/validate_visual_evidence.py \
+  --manifest output-tdd/figma-audits/<task>/visual-evidence.json \
+  --repo-root <repo> \
+  --write-receipt
+
+/usr/bin/python3 <skill-root>/scripts/validate_visual_evidence.py \
+  --manifest output-tdd/figma-audits/<task>/visual-evidence.json \
   --repo-root <repo>
 ```
+
+The first command writes task-scoped `validation-receipt.json` bound to the
+manifest claim, Git HEAD and tree, the tracked diff, all non-ignored
+untracked files, target files, all artifact hashes, and the validator/tool
+build hashes. A commit is not required.
+The second command fails when any bound content changes, so a previously valid
+receipt cannot authorize stale evidence.
 
 Close a row only when the exact asset/state/viewport is aligned, critical
 geometry is measured, interactions are observable, and no unexplained

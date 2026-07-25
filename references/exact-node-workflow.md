@@ -61,10 +61,23 @@ Audit each retrieved or user-supplied asset before accepting it:
 ```
 
 The audit records format, hash, bytes, intrinsic dimensions, SVG viewBox, and
-alpha capability. It does not provide pixel/RGBA comparison evidence and never
-authorizes a conversion by itself. An accepted WebP keeps both source and
-candidate in the repository and binds a comparison JSON to their audited
-hashes, dimensions, byte counts, alpha capability, tool, and RGBA statistics.
+whether the file header signals an alpha-capable encoding. Its
+`alpha_encoding_signaled` field does not describe decoded pixel transparency,
+does not provide pixel/RGBA comparison evidence, and never authorizes a
+conversion by itself. Generate WebP comparison evidence from both real files:
+
+```bash
+/usr/bin/python3 <skill-root>/scripts/compare_assets_rgba.py \
+  --source <source-asset> \
+  --candidate <candidate.webp> \
+  --output output-tdd/figma-audits/<task>/asset-difference.json
+```
+
+An accepted WebP keeps both source and candidate in the repository and binds
+the generated comparison JSON to `source_sha256`, `candidate_sha256`,
+dimensions, byte counts, decoded alpha/RGBA statistics, decoder, tool, and
+`lossless-exact` policy. The validator recomputes the comparison instead of
+trusting reported zero differences.
 
 Extend the file inventory into a visual-layer inventory for every exact frame.
 Include visible artwork and support/effect layers, including fills, gradients,
@@ -143,12 +156,20 @@ Switch to `feature-delivery` when the requested scope expands to multiple routes
 
 ## Evidence
 
-Before a visual completion claim, run:
+Before a visual completion claim, freeze the intended worktree state and
+generate then recheck the exact-node receipt:
 
 ```bash
 /usr/bin/python3 <skill-root>/scripts/validate_visual_evidence.py \
   --manifest output-tdd/figma-audits/<task>/visual-evidence.json \
-  --repo-root <repo>
+  --repo-root <repo> \
+  --require-claim presentation-slice-verified \
+  --write-receipt
+
+/usr/bin/python3 <skill-root>/scripts/validate_visual_evidence.py \
+  --manifest output-tdd/figma-audits/<task>/visual-evidence.json \
+  --repo-root <repo> \
+  --require-claim presentation-slice-verified
 ```
 
 Return the node/route/code mapping, changed files, focused tests, and real-route evidence.

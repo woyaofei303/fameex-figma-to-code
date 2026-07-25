@@ -1,16 +1,19 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "task": {
     "id": "<ticket-or-task>",
     "repository": "<absolute-repository-path>",
     "mode": "exact-node-implementation | feature-delivery | slice-implementation | audit-existing",
     "route": "<canonical-route>",
     "branch": "<branch>",
-    "locale": "zh-CN"
+    "locale": "zh-CN",
+    "target_paths": [
+      "<repo-relative-file-covered-by-this-evidence>"
+    ]
   },
   "claim": {
     "status": "pending",
-    "level": "presentation-slice-verified | feature-complete | release-ready | released"
+    "level": "presentation-slice-verified"
   },
   "required_viewports": [
     {
@@ -54,12 +57,12 @@
           "source": "<figma-node-layer-user-correction-or-project-config>",
           "expected": {
             "intent": "fixed | fluid | intrinsic | anchored | scroll | clipped",
-            "distribution": "start | center | end | gap | equal-tracks | grid",
+            "distribution": "start | center | end | gap | justify-between | equal-tracks | grid",
             "gap_px": 0
           },
           "actual": {
             "intent": "fixed | fluid | intrinsic | anchored | scroll | clipped",
-            "distribution": "start | center | end | gap | equal-tracks | grid",
+            "distribution": "start | center | end | gap | justify-between | equal-tracks | grid",
             "gap_px": 0
           },
           "tailwind": "<resolved-utilities>",
@@ -133,6 +136,10 @@
       "section_id": "<ranking-or-table-section-id>",
       "status": "pending | passed | failed",
       "artifact": "<repo-relative-evidence-path>",
+      "first_column_edge": 0,
+      "last_column_edge": 0,
+      "scroll_width": 0,
+      "client_width": 0,
       "columns": [
         {
           "id": "<column-id>",
@@ -157,19 +164,48 @@
     {
       "id": "<motion-check-id>",
       "section_id": "<motion-section-id>",
+      "kind": "interaction | intersection-observer | animation",
       "status": "pending | passed | failed",
       "trigger": false,
       "order": false,
       "input_lock": false,
       "completion": false,
       "unmount": false,
-      "artifact": "<repo-relative-evidence-path>"
+      "artifact": "<repo-relative-evidence-path>",
+      "observer": {
+        "scroll_root": "<actual-scroll-root>",
+        "overflow_owner": "<actual-overflow-owner>",
+        "root": "viewport | <selector>",
+        "root_margin": "<computed-root-margin>",
+        "threshold": 0,
+        "initially_visible": false,
+        "downward_entry_verified": false,
+        "upward_entry_verified": false,
+        "exit_verified": false,
+        "reentry_policy": "once | repeat",
+        "reentry_verified": false,
+        "responsive_root_change_verified": false,
+        "opacity_transform_verified": false,
+        "unobserve_verified": false,
+        "disconnect_verified": false,
+        "reduced_motion_verified": false,
+        "unsupported_observer_verified": false
+      }
     }
   ],
   "historical_reuse": [
     {
       "route": "<historical-route>",
-      "source": "<component-hook-primitive-or-asset>",
+      "viewport": {
+        "kind": "desktop | h5",
+        "width": 0,
+        "height": 0
+      },
+      "state": "<matching-state>",
+      "source_component": "<source-component>",
+      "source_capability": "<owning-hook-animation-or-style-primitive>",
+      "source_asset": "<source-asset-or-not-applicable>",
+      "requested_part": "<requested-visible-part>",
       "decision": "reuse | adapt | promote | reject",
       "evidence": "<repo-relative-evidence-path>"
     }
@@ -179,6 +215,7 @@
       "kind": "canonical-route | operational-exposure | app-webview | page-cta | share-destination",
       "owner": "<owner>",
       "source": "<prd-repository-app-config-or-unresolved>",
+      "configuration_location": "<repository-or-app-config-location>",
       "status": "pending | verified | unresolved",
       "evidence": "<repo-relative-evidence-path>"
     }
@@ -200,23 +237,33 @@
         "height": 0
       },
       "alpha": {
-        "source": "present | absent | unknown",
-        "candidate": "present | absent | unknown"
+        "source": "opaque | transparent",
+        "candidate": "opaque | transparent"
       },
       "visual_comparison": {
         "status": "unverified | passed | failed",
-        "tool": "<pixel-comparison-tool-or-empty>",
+        "tool": "compare-assets-rgba",
+        "policy": "lossless-exact",
         "artifact": "<task-scoped-comparison-json>",
         "required_artifact_fields": [
           "source_sha256",
           "candidate_sha256",
           "tool",
+          "tool_version",
+          "decoder",
           "status",
+          "policy=lossless-exact",
           "metric=rgba",
+          "source_dimensions",
+          "candidate_dimensions",
           "pixels_compared",
           "different_pixels",
           "max_channel_delta",
-          "alpha_different_pixels"
+          "total_channel_delta",
+          "mean_channel_delta",
+          "alpha_different_pixels",
+          "max_alpha_delta",
+          "alpha"
         ]
       }
     }

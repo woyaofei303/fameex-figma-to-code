@@ -151,4 +151,11 @@ Before claiming completion, verify:
   references form an explicit deletion boundary instead of leaking into the
   generic Campaign renderer.
 - Every changed file is listed and fresh output supports every pass claim.
-- Feature-level, release-level, and post-release claims also satisfy their corresponding Claim Level; slice evidence cannot be promoted to a broader claim.
+- Visual completion has a fresh `validation-receipt.json` generated from a
+  frozen candidate snapshot and rechecked against its manifest claim, Git
+  HEAD/tree, tracked diff, non-ignored untracked files, explicit target files,
+  and artifact hashes.
+- The visual validator proves only presentation-slice evidence. Feature
+  regression, release-level, and post-release claims also satisfy their
+  separate aggregate Claim Level; slice evidence cannot be promoted to a
+  broader claim.

@@ -78,6 +78,10 @@ class VisualFidelityLoopContractTest(unittest.TestCase):
             'responsive root change',
             '`unobserve`',
             '`disconnect`',
+            '`reentry_policy`',
+            '`reentry_verified`',
+            '`once`',
+            '`repeat`',
             'opacity',
             'transform',
             'unmount',
@@ -126,6 +130,25 @@ class VisualFidelityLoopContractTest(unittest.TestCase):
             '`environmental`',
             'focused tests',
             'real-route evidence',
+        ):
+            self.assertIn(requirement, reference)
+
+    def test_completion_gate_requires_a_fresh_receipt_and_real_rgba(self):
+        reference = (ROOT / 'references/visual-fidelity-loop.md').read_text()
+
+        for requirement in (
+            'compare_assets_rgba.py',
+            '`lossless-exact`',
+            '`--write-receipt`',
+            '`validation-receipt.json`',
+            'Git HEAD',
+            'target files',
+            'artifact hashes',
+            'tracked diff',
+            'untracked files',
+            'validator/tool',
+            'build hashes',
+            '`--draft`',
         ):
             self.assertIn(requirement, reference)
 

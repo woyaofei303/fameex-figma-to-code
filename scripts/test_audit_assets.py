@@ -66,13 +66,15 @@ class AuditAssetsTest(unittest.TestCase):
             {'width': 326, 'height': 260},
             by_format['png']['intrinsic_dimensions'],
         )
-        self.assertTrue(by_format['png']['alpha_capable'])
+        self.assertTrue(by_format['png']['alpha_encoding_signaled'])
+        self.assertNotIn('alpha_capable', by_format['png'])
         self.assertEqual('0 0 32 32', by_format['svg']['view_box'])
         self.assertEqual(
             {'width': 599, 'height': 400},
             by_format['webp']['intrinsic_dimensions'],
         )
-        self.assertTrue(by_format['webp']['alpha_capable'])
+        self.assertTrue(by_format['webp']['alpha_encoding_signaled'])
+        self.assertNotIn('alpha_capable', by_format['webp'])
         for item in payload['assets']:
             self.assertEqual(64, len(item['sha256']))
             self.assertGreater(item['bytes'], 0)

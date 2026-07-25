@@ -90,17 +90,29 @@ A slice enters implementation only when these are recorded:
 
 Then implement, verify the real route and network behavior, map tests/evidence back to acceptance, and update the Feature Manifest. A blocked slice stays blocked; confirmed sibling slices continue. When all required slices reach regression, enter `release-readiness`; after an explicitly authorized deployment, enter `post-release-validation`.
 
-Before marking visual evidence passed, run:
+Before marking one slice's presentation evidence passed, freeze the candidate
+worktree state and generate then recheck its bounded receipt:
 
 ```bash
 /usr/bin/python3 <skill-root>/scripts/validate_visual_evidence.py \
   --manifest output-tdd/figma-audits/<task>/visual-evidence.json \
-  --repo-root <repo>
+  --repo-root <repo> \
+  --require-claim presentation-slice-verified \
+  --write-receipt
+
+/usr/bin/python3 <skill-root>/scripts/validate_visual_evidence.py \
+  --manifest output-tdd/figma-audits/<task>/visual-evidence.json \
+  --repo-root <repo> \
+  --require-claim presentation-slice-verified
 ```
 
-An unresolved API can coexist with a verified presentation slice, but the
-validator rejects a complete-function or release claim until that contract is
-resolved.
+An unresolved API can coexist with a verified presentation slice. The visual
+validator intentionally proves only `presentation-slice-verified`; it cannot
+promote one route or slice into whole-feature regression. Cross-slice feature
+regression stays in the Feature Manifest and full verification contract until
+a dedicated slice-receipt aggregation gate exists. Release readiness and
+deployment claims remain separate gates and require their own business, API,
+CI, authorization, and operational evidence.
 
 ## Compact flow
 

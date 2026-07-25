@@ -408,15 +408,29 @@ cp "$SKILL_DIR/assets/templates/visual-evidence.json" \
   output-tdd/figma-audits/<task>/visual-evidence.json
 ```
 
-完成视觉验收前执行门禁：
+先补全 `task.target_paths` 以及全部证据字段。编辑阶段只能执行草稿校验：
 
 ```bash
+/usr/bin/python3 "$SKILL_DIR/scripts/validate_visual_evidence.py" \
+  --manifest output-tdd/figma-audits/<task>/visual-evidence.json \
+  --repo-root <repo> \
+  --draft
+```
+
+完成视觉验收前，确保 `output-tdd/` 已被 Git 忽略，冻结当前候选工作树状态，然后生成并立即复核校验回执：
+
+```bash
+/usr/bin/python3 "$SKILL_DIR/scripts/validate_visual_evidence.py" \
+  --manifest output-tdd/figma-audits/<task>/visual-evidence.json \
+  --repo-root <repo> \
+  --write-receipt
+
 /usr/bin/python3 "$SKILL_DIR/scripts/validate_visual_evidence.py" \
   --manifest output-tdd/figma-audits/<task>/visual-evidence.json \
   --repo-root <repo>
 ```
 
-清单统一记录精确节点、必测 Desktop/H5、几何与 expected/actual computed style、素材和效果层、响应式矩阵、复用、用户纠正、入口、交互、WebP 比较以及接口状态。证据文件必须位于当前任务的审计目录；短屏完整交互使用带精确视口和步骤的 Playwright JSON，不能用截图或手填布尔值代替。校验不通过时不能声明视觉完成。
+任务目录中的 `validation-receipt.json` 会绑定清单声明、Git HEAD/tree、tracked diff、全部未忽略的 untracked 文件、目标文件、所有证据文件以及 validator/tool build 的哈希，不要求提前提交；任何一项变化都会使旧回执失效。清单统一记录精确节点、必测 Desktop/H5、几何与 expected/actual computed style、素材和效果层、响应式矩阵、复用、用户纠正、入口、交互、WebP 比较以及接口状态。结构化 context 必须是匹配 file/node 的 `figma-mcp` JSON；geometry/style/table/motion 使用匹配清单字段的 Playwright JSON；截图、crop、difference 与纠正证据必须是真实 PNG/JPEG/WebP。证据文件必须位于当前任务的审计目录；短屏完整交互使用带精确视口和步骤的 Playwright JSON，不能用截图或手填布尔值代替。草稿校验或回执复核不通过时不能声明视觉完成。旧版 `1.x` 清单不能直接沿用完成声明；复制 `2.0` 模板、重新采集证据并生成新回执。
 
 ### 历史与素材审计
 
@@ -439,7 +453,16 @@ cp "$SKILL_DIR/assets/templates/visual-evidence.json" \
   --json
 ```
 
-没有逐像素比较能力时，WebP 候选保持 `unverified` 或 `rejected`，不能只按体积替换。标为 `accepted` 时，原图和候选图必须真实存在于仓库，比较 JSON 还要与两者的实际 hash、字节、尺寸、alpha 和 RGBA 统计一致。
+`audit_assets.py` 的 `alpha_encoding_signaled` 只表示文件头允许编码 alpha，不代表实际像素透明。WebP 候选必须由真实文件生成逐像素比较证据：
+
+```bash
+/usr/bin/python3 "$SKILL_DIR/scripts/compare_assets_rgba.py" \
+  --source <source-asset> \
+  --candidate <candidate.webp> \
+  --output output-tdd/figma-audits/<task>/asset-difference.json
+```
+
+比较策略固定为 `lossless-exact`。脚本会先尝试 Pillow，失败后回退 macOS `sips`；仅使用 `sips` 时，解码结果必须是 8-bit PNG，16-bit 源图需使用支持 WebP 的 Pillow。缺少可用解码器时，候选保持 `unverified` 或 `rejected`，不能只按体积替换。标为 `accepted` 时，原图和候选图必须真实存在于仓库；验证器会重新解码比较，拒绝伪造的零差异 JSON。
 
 ### Figma MCP 首次配置
 
@@ -503,7 +526,10 @@ Figma 案例：
 cd /Users/julian/.codex/skills/fameex-figma-to-code
 PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3 -m unittest discover \
   -s scripts -p 'test_*.py'
-/usr/bin/python3 /Users/julian/.codex/skills/.system/skill-creator/scripts/quick_validate.py .
+/usr/bin/python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-dev.txt
+.venv/bin/python \
+  /Users/julian/.codex/skills/.system/skill-creator/scripts/quick_validate.py .
 git diff --check
 git status --short
 ```

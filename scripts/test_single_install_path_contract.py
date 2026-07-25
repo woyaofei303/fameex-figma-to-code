@@ -25,6 +25,12 @@ class SingleInstallPathContractTest(unittest.TestCase):
             'output-tdd/figma-audits/<task>/visual-evidence.json',
             template,
         )
+        self.assertIn(
+            'output-tdd/figma-audits/<task>/validation-receipt.json',
+            template,
+        )
+        self.assertIn('receipt_sha256:', template)
+        self.assertIn('claim_level:', template)
 
     def test_workflows_use_one_canonical_manifest_and_validator(self):
         references = '\n'.join(
@@ -40,6 +46,8 @@ class SingleInstallPathContractTest(unittest.TestCase):
         self.assertIn('scripts/validate_visual_evidence.py', references)
         self.assertIn('scripts/search_codex_history.py', references)
         self.assertIn('scripts/audit_assets.py', references)
+        self.assertIn('scripts/compare_assets_rgba.py', references)
+        self.assertIn('--write-receipt', references)
         self.assertIn(
             'output-tdd/figma-audits/<task>/visual-evidence.json',
             references,

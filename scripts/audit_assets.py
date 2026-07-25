@@ -191,7 +191,13 @@ def inspect_asset(path):
     )
     if metadata is None:
         raise ValueError('Unsupported or malformed image format.')
-    format_name, width, height, alpha_capable, view_box = metadata
+    (
+        format_name,
+        width,
+        height,
+        alpha_encoding_signaled,
+        view_box,
+    ) = metadata
     return {
         'path': str(path.resolve()),
         'format': format_name,
@@ -202,7 +208,7 @@ def inspect_asset(path):
             'height': height,
         },
         'view_box': view_box,
-        'alpha_capable': alpha_capable,
+        'alpha_encoding_signaled': alpha_encoding_signaled,
         'pixel_rgba_verified': False,
         'conversion_decision': 'unverified',
     }
