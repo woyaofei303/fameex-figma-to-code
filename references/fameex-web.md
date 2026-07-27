@@ -11,6 +11,66 @@ Load during repository mapping and touched-scope validation.
 
 Resolve the owning app from the existing route and neighboring code. Admin work must follow that app's established Ant Design, Element, or other existing component system; do not import the customer Web system merely for visual similarity.
 
+### Next.js Admin Type, API, and Utility Ownership
+
+For `apps/admin`, classify every new or moved export before implementation and put it in the narrowest established owner:
+
+- Put backend DTOs, query parameters, mutation forms, and shared Admin view-model types in `apps/admin/src/types/<domain>.ts` when both services and features consume them.
+- Keep endpoint constants, wire-contract adapters, request functions, TanStack query options, primitive query/mutation hooks, uploads, and downloads in `apps/admin/src/services/api/<domain>*.ts`.
+- Use `apps/admin/src/services/hooks/<domain>.ts` only for a wrapper that composes primitive API hooks with Admin UI concerns such as i18n, stores, notifications, or approval flow. Do not move a raw API hook there merely because it is a React hook.
+- Put pure domain utilities used by two or more Admin features in `apps/admin/src/utils/<domain>.ts`. A utility imported by one feature and one API module is not automatically cross-feature; keep wire-only transforms with the API contract.
+- Put one-feature filter state, display mappers, options, and constants under `apps/admin/src/apps/<Feature>/utils/` or a feature-local `options.ts` / `constants.ts`.
+
+Keep the dependency direction explicit:
+
+```text
+types -> shared pure utils and services/api -> services/hooks -> feature
+```
+
+`types` and shared `utils` must not import from `services` or `apps`; `services/api` must not import from `apps`. Production feature code should import each symbol from its owning module. Keep a compatibility re-export only when an existing public or dirty import path requires staged migration, and do not use that facade for new production imports.
+
+When a domain service becomes large, split it by stable responsibility with the same domain prefix rather than by arbitrary file length. For example, a VIP Admin feature can use:
+
+```text
+apps/admin/src/types/userVipLevelSetting.ts
+apps/admin/src/utils/userVipLevelSetting.ts
+apps/admin/src/utils/userVipPairOptions.ts
+apps/admin/src/services/api/userVipLevelSetting.ts
+apps/admin/src/apps/UserVipLevelSetting/options.ts
+apps/admin/src/apps/UserVipLevelSetting/utils/queryActivation.ts
+```
+
+Before creating any of these files, inspect neighboring Admin domains and search for an existing owner to extend. After moving symbols, search production imports to confirm types, pure utilities, and API hooks no longer enter through a monolithic compatibility facade.
+
+### Customer Web Schema, Type, API, and Utility Ownership
+
+For `apps/web`, classify a domain contract by responsibility before adding a new file. Extend an established owner when one already exists:
+
+- Put shared backend response schemas and their `z.infer` response types together in `apps/web/src/services/zod/<domain>.zod.ts` when the domain uses a reusable service-level contract. Do not manually duplicate the same response shape in `types` and `services/zod`.
+- Use `apps/web/src/types/<domain>.ts` for stable cross-layer types that are independent of a runtime response schema, or when neighboring code already establishes that domain as the schema/type owner. Choose one canonical owner from repository evidence.
+- Keep endpoint constants, proxy-aware URLs, wire-only request DTOs and builders, `getQuery` / `getMutation` adapters, primitive TanStack query/mutation hooks, uploads, and downloads in `apps/web/src/services/api/<domain>.ts`. Do not promote a request DTO merely because one feature constructs it.
+- Use `apps/web/src/services/hooks/<domain>.ts` only for composition that adds login state, Zustand state, i18n, navigation, or derived product behavior around primitive API hooks. A raw `useQuery` or `useMutation` wrapper remains in `services/api`.
+- Put pure cross-feature domain, display, formatting, mapping, or backend-target routing helpers in the established `apps/web/src/utils/<domain>.ts`. Keep a mapper used by only one feature beside that feature.
+
+Keep the customer Web dependency direction explicit:
+
+```text
+services/zod or canonical types -> services/api and shared pure utils ->
+services/hooks -> feature
+```
+
+`services/zod` and canonical `types` must not import from API, hooks, or features. API and shared utilities must not import from `apps`. Production code should import schemas, response types, API hooks, and pure helpers directly from their canonical owners. Use a compatibility re-export only for a staged migration or an existing public contract; canonical modules and new production code must not import through that facade, and it should be removed after repository search confirms no consumer needs it.
+
+Split large domain files by stable responsibility rather than length. For example, a Web VIP contract can use:
+
+```text
+apps/web/src/services/zod/vip.zod.ts
+apps/web/src/services/api/vip.ts
+apps/web/src/utils/vipBenefits.ts
+```
+
+Before creating a parallel `types`, `hooks`, or utility file, inspect neighboring domains and search for an owner that can be extended. After moving exports, search all production imports and verify each symbol enters through its real owner rather than a monolithic API facade.
+
 ## Repository Token Discovery
 
 Resolve the active app's Tailwind config and every inherited preset before translating Figma values into utility classes. For customer Web, read:
