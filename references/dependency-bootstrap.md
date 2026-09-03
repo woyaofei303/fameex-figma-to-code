@@ -2,6 +2,8 @@
 
 Load this reference when an accepted sub-skill is missing or the current task lacks that phase's required runtime capability. For Figma, missing structured-context or screenshot tools counts even when a `figma` skill is installed.
 
+This is an explicit repair path, not default preflight. Obtain user approval before installing a skill or plugin, starting authentication, or changing MCP/Codex configuration. Read-only inspection of current capabilities needs no approval.
+
 Use [capability-registry.md](capability-registry.md) first to decide whether a capability is required, conditional, optional, or outside the default workflow. This file only explains recovery for a capability that has already been triggered.
 
 ## Capability Registry
@@ -24,7 +26,7 @@ For each capability:
 1. Check the available-skills catalog for the accepted names.
 2. Check `$CODEX_HOME/skills/<fallback-name>/SKILL.md`.
 3. Check known system skills and the enabled providers shown by `codex plugin list`.
-4. If an accepted official plugin provides the capability, add only that provider and verify that it is enabled.
+4. With user approval, if an accepted official plugin provides the capability, add only that provider and verify that it is enabled.
 5. If still missing, use `skill-installer` only when it resolves an exact curated or explicit GitHub source.
 6. If no exact install source exists, or installation fails, run the bundled fallback bootstrap.
 
@@ -87,7 +89,7 @@ Use the same selected server for the identity probe, exact-node structured read,
 
 ### Register and authorize when needed
 
-If no official endpoint is configured, use this OAuth-first setup:
+With user approval, if no official endpoint is configured, use this OAuth-first setup:
 
 ```bash
 codex mcp add figmaremotemcp --url https://mcp.figma.com/mcp

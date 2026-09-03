@@ -1,12 +1,22 @@
 # Exact Node Workflow
 
-Load only for `exact-node-implementation`: a bounded page or component supplied as an exact Figma Design URL with a `node-id`.
+Load for `targeted-change` or `strict-parity`. Both use an exact Figma Design URL with a `node-id` when Figma evidence is supplied.
 
 ## Entry
 
 Use the exact node plus the current repository and worktree. Infer the owning app, route, and code target only from unambiguous repository evidence; when mapping is ambiguous, ask only for the missing target. A PRD is not required, a global Figma inventory is not required, and a Feature Manifest is not required.
 
-Read structured context and a same-node screenshot, map the target and reuse candidates, then follow the parent workflow. Existing repository behavior and confirmed API contracts still own business behavior.
+Read structured context and a same-node screenshot, map the target, then follow the parent workflow. Existing repository behavior and confirmed API contracts still own business behavior.
+
+### Targeted change
+
+`targeted-change` is the default for a bounded change to an existing route, component, style, copy, asset, or dialog. Map the exact code owner, inspect reuse only when a relevant component, asset, hook, or wrapper is being chosen, implement the smallest change, run focused tests, and verify the real route at each affected viewport and state.
+
+No full visual-evidence manifest or receipt is required, and no complete viewport matrix is required. Keep concise node/route/code mapping and affected viewport evidence in the task report. Escalate before claiming strict parity when the scope or requested evidence crosses the boundary below.
+
+### Strict parity
+
+Use `strict-parity` when the user asks for 逐帧、逐像素、每个距离 verification, or when the work is a new page, spans multiple linked states, includes complex motion, or couples Desktop/H5 implementations. Strict parity preserves the existing visual evidence schema: record manifest mode as `exact-node-implementation`, then use `visual-evidence.json`, RGBA comparison, the complete viewport matrix, and `validation-receipt.json`.
 
 Copy `assets/templates/visual-evidence.json` to
 `output-tdd/figma-audits/<task>/visual-evidence.json` and keep all frame,
@@ -20,6 +30,10 @@ boundary, and user-declared viewport. A user correction such as `320x568` is a
 sourced requirement, not an optional sampling suggestion. For every changed
 layout owner, record sourced `expected` sizing/distribution/gap and measured
 `actual` values plus Tailwind and computed styles.
+
+## Strict-parity procedures
+
+The remaining intake, asset, composition, state, and receipt gates apply to `strict-parity`.
 
 ### Large Canvas Protocol
 
@@ -154,7 +168,7 @@ Do not invent API paths, permissions, states, submissions, or navigation from th
 
 Switch to `feature-delivery` when the requested scope expands to multiple routes, product-owned states, cross-app rules, or acceptance that needs requirement-level traceability. In the new Manifest, reuse existing exact-node evidence instead of repeating verified work. Do not retroactively force a scope that stays bounded into a Feature Manifest.
 
-## Evidence
+## Strict-parity evidence
 
 Before a visual completion claim, freeze the intended worktree state and
 generate then recheck the exact-node receipt:

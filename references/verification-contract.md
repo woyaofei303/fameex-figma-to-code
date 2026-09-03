@@ -121,21 +121,23 @@ A focused test, browser pass, verified slice, or Feature Manifest status alone d
 
 ## Final Response Contract
 
-Return these sections in order:
+### Targeted response
+
+Return only what the task needs, normally in this order:
 
 1. **Outcome** — implemented scope and whether browser validation completed; no parity claim without evidence.
-2. **Figma Mapping** — file/node and implemented sections/components.
-3. **Reuse Decisions** — reused/adapted/promoted/local components and assets, with reasons for non-reuse; list shared hooks, tokens, icons, services, and state patterns.
-4. **修改文件** — every changed absolute path in a copyable fenced block.
-5. **Validation** — exact command/step and result for Biome, owning-app typecheck, owning-package focused tests, Simplified Chinese JSON and lookup coverage, localized metadata, `git diff --check`, Playwright desktop/mobile, confirmed interactions, and applicable sanitized network/state evidence. Include other-locale evidence only when in scope. Classify failures as introduced, pre-existing, or environmental.
-6. **Artifacts** — absolute screenshot/trace paths.
-7. **Failures and Deviations** — failure-record shape; `None` only when evidence supports it.
-8. **Pending Business Questions** — behavior not established by Figma and repository evidence.
-9. **查看修改** — standalone `git status --short` and touched-path `git diff` commands.
+2. **修改文件** — every changed absolute path in a copyable fenced block.
+3. **Validation** — exact commands or browser steps and fresh results. Include focused tests, owning-app checks, touched-locale checks, `git diff --check`, affected viewports, and applicable sanitized network/state evidence. Classify failures as introduced, pre-existing, or environmental.
+4. **Failures and Deviations** — omit when none; otherwise use the failure-record shape above.
+5. **查看修改** — standalone `git status --short` and touched-path `git diff` commands.
+
+### Strict or feature additions
+
+For `strict-parity`, `feature-delivery`, audits, or release work, add only applicable sections: **Figma Mapping**, **Reuse Decisions**, **Artifacts**, and **Pending Business Questions**. A strict response identifies the manifest and receipt. A feature or release response states its narrowest supported Claim Level.
 
 ## Completion Gate
 
-Before claiming completion, verify:
+Before claiming completion, apply only gates triggered by the selected mode. A `targeted-change` requires same-node evidence when Figma was supplied, affected-route/viewports, focused checks, and a complete changed-file report; it does not require a strict manifest or receipt. For `strict-parity`, feature, audit, or release work, verify the applicable gates below:
 
 - Structured Figma context and the matching node screenshot preceded implementation.
 - The real route and owning app were mapped; the manifest classified controls/assets as `reuse`, `adapt`, `promote`, or `local`.

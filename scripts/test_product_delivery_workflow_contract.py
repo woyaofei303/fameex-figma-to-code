@@ -81,20 +81,17 @@ class ProductDeliveryWorkflowContractTest(unittest.TestCase):
         workflow = (ROOT / 'references/product-delivery-workflow.md').read_text()
         self.assertIn('test seam', workflow)
 
-    def test_readme_explains_feature_intake_and_optional_tools_concisely(self):
+    def test_readme_explains_feature_intake_concisely(self):
         readme_path = ROOT / 'README.md'
         if not readme_path.exists():
             self.skipTest('installed runtime bundle does not include README.md')
         readme = readme_path.read_text()
 
         for requirement in (
-            '产品需求到代码闭环',
-            '先提供完整需求和 Figma 总入口',
+            '`feature-delivery`',
+            '完整需求和 Figma 总入口',
             '按业务切片开发',
-            '`grill-me`',
-            '`grill-with-docs`',
-            '`prototype`',
-            '默认不加载',
+            'references/product-delivery-workflow.md',
         ):
             self.assertIn(requirement, readme)
 

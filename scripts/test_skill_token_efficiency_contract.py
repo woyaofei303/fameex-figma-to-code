@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class SkillTokenEfficiencyContractTest(unittest.TestCase):
-    def test_entry_skill_stays_compact_without_losing_phase_routes(self):
+    def test_entry_skill_stays_compact_without_losing_conditional_routes(self):
         skill = (ROOT / 'SKILL.md').read_text()
 
         self.assertLessEqual(
@@ -16,21 +16,29 @@ class SkillTokenEfficiencyContractTest(unittest.TestCase):
             'Keep the always-loaded entry concise; move detail to references.',
         )
         for requirement in (
+            '`targeted-change`',
+            '`strict-parity`',
             'references/dependency-bootstrap.md',
             'references/existing-implementation-audit.md',
             'references/fameex-web.md',
             'references/api-integration.md',
             'references/verification-contract.md',
             'authenticated exact-node read',
-            'contract manifest',
-            'audit_reuse.py',
+            'For server-backed work only',
+            'audit_reuse.py` only when',
             'reuse`, `adapt`, `promote`, or `local',
             'Simplified Chinese',
             '`figma-implement-design`',
             '`playwright`',
             '`superpowers:verification-before-completion`',
+            'ask before any installation or configuration change',
         ):
             self.assertIn(requirement, skill)
+
+        targeted = skill.split('- `targeted-change`', 1)[1].split(
+            '- `strict-parity`', 1
+        )[0]
+        self.assertIn('No full visual manifest', targeted)
 
     def test_readme_describes_contract_tests_without_overclaiming_runtime_coverage(self):
         readme_path = ROOT / 'README.md'
@@ -52,7 +60,25 @@ class SkillTokenEfficiencyContractTest(unittest.TestCase):
         )
         self.assertIn('验证数字以命令的当前输出为准', readme)
 
-    def test_readme_explains_problem_purpose_and_execution_flow(self):
+    def test_final_response_expands_only_for_strict_or_feature_work(self):
+        contract = (ROOT / 'references/verification-contract.md').read_text()
+
+        for requirement in (
+            'Targeted response',
+            'Outcome',
+            '修改文件',
+            'Validation',
+            'Failures and Deviations',
+            '查看修改',
+            'Strict or feature additions',
+            'Figma Mapping',
+            'Reuse Decisions',
+            'Artifacts',
+            'Pending Business Questions',
+        ):
+            self.assertIn(requirement, contract)
+
+    def test_readme_is_a_concise_human_entry_not_a_second_skill(self):
         readme_path = ROOT / 'README.md'
         if not readme_path.exists():
             self.skipTest('installed runtime bundle does not include README.md')
@@ -60,25 +86,26 @@ class SkillTokenEfficiencyContractTest(unittest.TestCase):
 
         headings = (
             '## 这套 Skill 解决什么问题',
-            '## 核心目的',
-            '## 完整执行流程',
+            '## 模式',
+            '## 快速使用',
+            '## 验证 Skill',
         )
         for heading in headings:
             self.assertIn(heading, readme)
         self.assertLess(readme.index(headings[0]), readme.index(headings[1]))
         self.assertLess(readme.index(headings[1]), readme.index(headings[2]))
 
+        self.assertLessEqual(len(readme.splitlines()), 180)
         for requirement in (
-            'flowchart TD',
             '找对页面',
             '看懂设计',
             '不替业务做决定',
             '用真实结果验收',
-            '视觉部分先停',
-            '其他有依据的修改可以继续',
-            '检查通过？',
+            '安装或修改配置前',
         ):
             self.assertIn(requirement, readme)
+
+        self.assertNotIn('flowchart TD', readme)
 
 
 if __name__ == '__main__':

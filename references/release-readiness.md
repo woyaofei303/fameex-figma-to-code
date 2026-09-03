@@ -36,7 +36,7 @@ Review the fixed diff on two independent axes:
 - **Standards axis**: AGENTS/CONTRIBUTING/context/ADR and owning-app conventions.
 - **Spec axis**: PRD revision, Feature Manifest Traceability, Figma states, API contracts, acceptance, and explicit user corrections.
 
-Load one usable `code-review` or `review` provider and give it the fixed point plus these sources. If neither is usable, keep the same two result slots and perform the bounded checks directly. No unresolved P0/P1 or unowned finding may pass the gate.
+Load `review` and give it the fixed point plus these sources. If it is unavailable, keep the same two result slots and perform the bounded checks directly. No unresolved P0/P1 or unowned finding may pass the gate.
 
 ## Build, CI, and sign-offs
 
@@ -56,7 +56,7 @@ Before `ready`, record:
 
 ## Deployment boundary
 
-Production deployment is an external write. Execute it only after explicit user authorization for the target environment and only through the existing deployment pipeline discovered in the repository or organization. Record `deployment_authorization`, `authorized_by`, and `authorized_scope`. `github:yeet` may publish code when requested; it does not authorize or prove production deployment.
+Production deployment is an external write. Execute it only after explicit user authorization for the target environment and only through the existing deployment pipeline discovered in the repository or organization. Record `deployment_authorization`, `authorized_by`, and `authorized_scope`. A commit or push request does not authorize or prove production deployment.
 
 After deployment, record the deployed version/tag/commit, time, environment, operator/pipeline result, and status `released`. If deployment is not authorized or the pipeline is inaccessible, stop at `ready` and report the exact boundary.
 

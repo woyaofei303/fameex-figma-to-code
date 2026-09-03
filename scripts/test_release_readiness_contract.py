@@ -20,6 +20,7 @@ class ReleaseReadinessContractTest(unittest.TestCase):
             'references/capability-index.md',
         ):
             self.assertIn(requirement, skill)
+        self.assertIn('only when explicitly requested', skill)
 
     def test_default_capability_read_is_compact_and_heavy_registry_is_conditional(self):
         skill = (ROOT / 'SKILL.md').read_text()
@@ -63,7 +64,7 @@ class ReleaseReadinessContractTest(unittest.TestCase):
             self.assertIn(requirement, release)
 
         self.assertIn('assets/templates/release-readiness.yaml', release)
-        self.assertIn('`code-review` or `review`', registry)
+        self.assertIn('`review`', registry)
 
     def test_feature_manifest_traces_each_requirement_and_local_history(self):
         workflow = (ROOT / 'references/product-delivery-workflow.md').read_text()
@@ -131,20 +132,16 @@ class ReleaseReadinessContractTest(unittest.TestCase):
         ):
             self.assertIn(requirement, verification)
 
-    def test_readme_explains_the_full_closed_loop_without_auto_deploying(self):
+    def test_readme_keeps_release_modes_explicit_and_non_automatic(self):
         readme_path = ROOT / 'README.md'
         if not readme_path.exists():
             self.skipTest('installed runtime bundle does not include README.md')
         readme = readme_path.read_text()
 
         for requirement in (
-            '需求到上线的完整闭环',
-            '联调完成不等于可以上线',
-            '回归审查',
-            '发布准入',
-            '回滚方案',
-            '上线后验证',
-            '只实现不依赖接口的子切片',
+            '`release-readiness`',
+            '`post-release-validation`',
+            '仅在用户明确要求时',
             '明确授权',
         ):
             self.assertIn(requirement, readme)

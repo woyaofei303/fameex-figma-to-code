@@ -1,42 +1,32 @@
 ---
 name: fameex-figma-to-code
-description: Use when implementing or auditing a FameEX frontend feature from a product requirement, Figma Design URL, exact frame, or node-id, especially across routes, states, APIs, localization, and browser verification.
+description: Use when implementing or auditing FameEX frontend work from a Figma Design URL, exact node, visual correction, or product requirement, including strict pixel-parity and multi-route feature delivery.
 ---
 
 # FameEX Figma to Code
 
-Turn confirmed product and design evidence into code in the owning FameEX app. Preserve behavior, reuse the design system, and prove results.
+Turn confirmed design and product evidence into the smallest correct change in the owning FameEX app. Preserve existing behavior and unrelated work.
 
 ## Preflight
 
-Record repository, worktree, branch, dirty state, app, route, locale namespace, and loaded skill root. Preserve unrelated changes. Stop only the unsafe or unverified dependent part.
+Record repository, worktree, branch, dirty state, app, route, locale namespace, and loaded skill root. Read [references/capability-index.md](references/capability-index.md) and resolve only capabilities triggered by the selected mode.
 
-Read [references/capability-index.md](references/capability-index.md); resolve only required or triggered capabilities. If the skill is missing or required Figma tools fail, follow [references/dependency-bootstrap.md](references/dependency-bootstrap.md), validate, and resume the original task. Never overwrite a skill directory. A `figma` skill, MCP registration, or OAuth alone is insufficient: require an authenticated exact-node read in the current task.
+Select the smallest mode that fits:
 
-Select one mode:
-
-- `exact-node-implementation`: bounded page/component from one exact Design node. Load [references/exact-node-workflow.md](references/exact-node-workflow.md); no Feature Manifest.
-- `feature-delivery`: complete a PRD or multi-page feature intake with its global design entry. Load [references/product-delivery-workflow.md](references/product-delivery-workflow.md), build the Feature Manifest, and do not code until slices and conflicts are mapped.
-- `slice-implementation`: load that manifest; require the slice's exact nodes, route, behavior, and API status.
-- `audit-existing`: fix a merge-base, create a route/node/code manifest, and load [references/existing-implementation-audit.md](references/existing-implementation-audit.md).
-- `release-readiness`: freeze the candidate commit, aggregate verified slices, and load [references/release-readiness.md](references/release-readiness.md).
-- `post-release-validation`: after an authorized deployment, use the same reference for production-safe smoke, monitoring, and rollback evidence.
+- `targeted-change` (default): an existing UI/style/copy/asset/component/dialog change. Load [references/exact-node-workflow.md](references/exact-node-workflow.md); validate only affected states and viewports. No full visual manifest, receipt, or viewport matrix.
+- `strict-parity`: explicit 逐帧、逐像素、每个距离要求; a new page; multiple linked states; complex motion; or coupled Desktop/H5 work. Load the same reference and [references/visual-fidelity-loop.md](references/visual-fidelity-loop.md); converge one section, one state, and one viewport at a time with the existing `exact-node-implementation` evidence schema, RGBA checks, viewport matrix, and receipt.
+- `feature-delivery`: a PRD, multi-route work, or cross-app behavior. Load [references/product-delivery-workflow.md](references/product-delivery-workflow.md) and build the Feature Manifest before implementation.
+- `slice-implementation`: implement one fully mapped Feature Manifest slice.
+- `audit-existing`: load [references/existing-implementation-audit.md](references/existing-implementation-audit.md) against a fixed merge-base.
+- `release-readiness` / `post-release-validation`: use [references/release-readiness.md](references/release-readiness.md) only when explicitly requested. Deployment still requires explicit authorization.
 
 ## Workflow
 
-1. **Collect evidence.** Load `figma`; fetch structured context and same-node screenshot. Capture hierarchy, constraints, tokens, copy, states, navigation, assumptions, and unknowns. For large canvases, locate child frames before detailed context. Inventory visible layers before layout edits.
-2. **Map code.** Read [references/fameex-web.md](references/fameex-web.md); inspect route, shell, adjacent code, state, i18n, tests, responsive patterns, and active Tailwind presets before choosing utilities. For uncertain styles, follow its config-to-computed-value protocol. Run:
+1. **Collect evidence.** When Figma is supplied, load `figma` and require structured context plus a same-node screenshot from an authenticated exact-node read in the current task. A `figma` skill, MCP registration, or OAuth alone is insufficient. Do not infer product behavior from visuals.
+2. **Map code.** Read [references/fameex-web.md](references/fameex-web.md); inspect the real route, adjacent implementation, responsive rules, tests, and i18n. Run `scripts/audit_reuse.py` only when choosing or adding a component, asset, hook, API wrapper, or when historical reuse is requested. Classify relevant candidates as `reuse`, `adapt`, `promote`, or `local`.
+3. **Lock contracts.** PRD/backend owns behavior, Figma owns presentation, repository evidence owns structure. For server-backed work only, read [references/api-integration.md](references/api-integration.md) and complete the contract manifest for each interaction or independently releasable slice. Keep unknown behavior unavailable.
+4. **Implement.** Load `figma-implement-design` for visual implementation. Reuse repository components/assets. Put changed frontend copy in Simplified Chinese i18n; inspect other locales only when touched or required.
+5. **Verify.** For visible UI or an explicit browser audit, read [references/verification-contract.md](references/verification-contract.md), load `playwright`, and exercise the real route at affected viewports. Run focused tests, owning-app checks, locale checks when touched, and `git diff --check`. Store useful artifacts under `output-tdd/`.
+6. **Report.** Load `superpowers:verification-before-completion`; make only claims supported by fresh evidence. Do not commit, push, publish, install, authenticate, or modify Codex configuration without the required user request or approval.
 
-   ```bash
-   /usr/bin/python3 <skill-root>/scripts/audit_reuse.py --repo-root <repo> <absolute-target-paths...>
-   ```
-
-   Classify controls/assets as `reuse`, `adapt`, `promote`, or `local`; explain non-reuse.
-3. **Lock contracts.** PRD/backend owns behavior, Figma visuals, repository structure. Never infer APIs, permissions, enums, submissions, or production fallback data. For server-backed work, load [references/api-integration.md](references/api-integration.md) and complete a contract manifest for each interaction or independently releasable slice.
-4. **Implement.** Load `figma-implement-design` and [references/visual-fidelity-loop.md](references/visual-fidelity-loop.md). Create its canonical `visual-evidence.json`; converge one section, one state, and one viewport at a time. Use its RGBA comparator and receipt gate. Use components/assets. Put copy and labels in i18n; change only Simplified Chinese. Keep unconfirmed behavior unavailable.
-5. **Verify route.** Read [references/verification-contract.md](references/verification-contract.md), load `playwright`, and check `zh-CN`, exact viewport, responsive layout, interactions, assets, navigation, console/network, and account states. Store useful artifacts under `output-tdd/`.
-6. **Verify scope.** Run owning-app formatting, focused tests, typecheck, locale checks, and `git diff --check`; classify failures as introduced, pre-existing, or environmental.
-7. **Close the feature.** Slice verification is not release readiness. Use `release-readiness` for cross-slice regression, review, build/CI, sign-offs, rollout, rollback, and monitoring; use `post-release-validation` after deployment.
-8. **Report evidence.** Load `superpowers:verification-before-completion` or fallback. Claim only freshly verified results.
-
-Code Connect remains optional.
+If a triggered capability is absent, ask before any installation or configuration change, then use [references/dependency-bootstrap.md](references/dependency-bootstrap.md) and resume the original task. Code Connect remains optional.

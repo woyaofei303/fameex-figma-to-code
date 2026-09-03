@@ -6,25 +6,26 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class ExactNodeCompatibilityContractTest(unittest.TestCase):
-    """The previous entry described exact node-id work but exposed no mode
-    that could start without a Feature Manifest.
-    """
+    """Figma work defaults to the smallest evidence loop that fits."""
 
-    def test_entry_has_distinct_exact_node_feature_and_slice_modes(self):
+    def test_entry_has_targeted_strict_feature_and_slice_modes(self):
         skill = (ROOT / 'SKILL.md').read_text()
 
         for requirement in (
-            'exact-node-implementation',
+            'targeted-change',
+            'strict-parity',
             'feature-delivery',
             'slice-implementation',
             'references/exact-node-workflow.md',
         ):
             self.assertIn(requirement, skill)
 
-    def test_exact_node_mode_keeps_the_original_lightweight_entry(self):
+    def test_targeted_change_is_the_default_lightweight_entry(self):
         reference = (ROOT / 'references/exact-node-workflow.md').read_text()
 
         for requirement in (
+            '`targeted-change`',
+            'default',
             'exact Figma Design URL',
             '`node-id`',
             'current repository',
@@ -33,11 +34,29 @@ class ExactNodeCompatibilityContractTest(unittest.TestCase):
             'global Figma inventory is not required',
             'unambiguous repository evidence',
             'focused tests',
-            'real-route evidence',
+            'affected viewport',
         ):
             self.assertIn(requirement, reference)
 
-    def test_exact_node_mode_escalates_only_when_scope_becomes_a_feature(self):
+        self.assertIn('No full visual-evidence manifest or receipt', reference)
+
+    def test_strict_parity_preserves_the_existing_evidence_gate(self):
+        reference = (ROOT / 'references/exact-node-workflow.md').read_text()
+
+        for requirement in (
+            '`strict-parity`',
+            '逐帧',
+            '逐像素',
+            '每个距离',
+            'visual-evidence.json',
+            'RGBA',
+            'viewport matrix',
+            'validation-receipt.json',
+            '`exact-node-implementation`',
+        ):
+            self.assertIn(requirement, reference)
+
+    def test_node_work_escalates_only_when_scope_becomes_a_feature(self):
         reference = (ROOT / 'references/exact-node-workflow.md').read_text()
 
         for requirement in (
@@ -50,25 +69,26 @@ class ExactNodeCompatibilityContractTest(unittest.TestCase):
         ):
             self.assertIn(requirement, reference)
 
-    def test_readme_explains_both_compatible_entries(self):
+    def test_readme_explains_the_three_main_entries(self):
         readme_path = ROOT / 'README.md'
         if not readme_path.exists():
             self.skipTest('installed runtime bundle does not include README.md')
         readme = readme_path.read_text()
 
         for requirement in (
-            '两种入口可以同时使用',
-            '精确节点直达',
-            '不需要先创建 Feature Manifest',
-            '完整需求模式',
-            '带 node-id 的 Figma Design 链接',
+            '`targeted-change`',
+            '`strict-parity`',
+            '`feature-delivery`',
+            '默认',
+            '逐帧',
         ):
             self.assertIn(requirement, readme)
 
-    def test_default_prompt_discovers_both_entry_shapes(self):
+    def test_default_prompt_discovers_all_entry_shapes(self):
         metadata = (ROOT / 'agents/openai.yaml').read_text()
 
-        self.assertIn('exact-node page', metadata)
+        self.assertIn('targeted change', metadata)
+        self.assertIn('strict visual parity', metadata)
         self.assertIn('full product feature', metadata)
 
 

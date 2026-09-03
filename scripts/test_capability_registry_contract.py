@@ -6,25 +6,22 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class CapabilityRegistryContractTest(unittest.TestCase):
-    def test_entry_loads_compact_index_and_resumes_original_task(self):
+    def test_entry_loads_compact_index_and_repairs_only_triggered_capabilities(self):
         skill = (ROOT / 'SKILL.md').read_text()
         preflight = skill.split('## Workflow', 1)[0]
 
-        for requirement in (
-            'references/capability-index.md',
-            'required or triggered',
-            'resume the original task',
-        ):
-            self.assertIn(requirement, preflight)
+        self.assertIn('references/capability-index.md', preflight)
+        self.assertIn('only capabilities triggered by the selected mode', preflight)
+        self.assertIn('resume the original task', skill)
 
         index = (ROOT / 'references/capability-index.md').read_text()
         self.assertIn('references/capability-registry.md', index)
 
-    def test_registry_classifies_skills_plugins_mcp_and_apps(self):
+    def test_registry_classifies_mode_required_conditional_and_optional_tools(self):
         registry = (ROOT / 'references/capability-registry.md').read_text()
 
         for requirement in (
-            'Required',
+            'Mode-required',
             'Conditional',
             'Optional',
             'Not used by default',
@@ -32,13 +29,9 @@ class CapabilityRegistryContractTest(unittest.TestCase):
             '`figma-implement-design`',
             '`playwright`',
             '`superpowers:verification-before-completion`',
-            '`verification-before-completion`',
             '`skill-installer`',
             '`lark-doc`',
             '`figma:figma-code-connect`',
-            '`github:yeet`',
-            '`figma@openai-curated`',
-            '`superpowers@openai-curated`',
             'No App or Connector is mandatory',
             '`browser` / `chrome` / `computer-use`',
             '`imagegen`',
@@ -46,33 +39,21 @@ class CapabilityRegistryContractTest(unittest.TestCase):
         ):
             self.assertIn(requirement, registry)
 
-    def test_engineering_capabilities_choose_one_compatible_provider(self):
+    def test_engineering_capabilities_use_one_canonical_provider(self):
         index = (ROOT / 'references/capability-index.md').read_text()
         registry = (ROOT / 'references/capability-registry.md').read_text()
 
-        for requirement in (
-            '`tdd` or `superpowers:test-driven-development`',
-            '`diagnosing-bugs`, `diagnose`, or `superpowers:systematic-debugging`',
-            '`code-review` or `review`',
-        ):
-            self.assertIn(requirement, index)
-            self.assertIn(requirement, registry)
-
-        for requirement in (
-            'Select one provider',
-            'visual-only',
-            'hard, intermittent, or performance',
-        ):
-            self.assertIn(requirement, registry)
-
-        for redundant_orchestration in (
-            '`implement`',
-            '`ask-matt`',
-            '`to-spec`',
-            '`to-tickets`',
-        ):
-            self.assertNotIn(redundant_orchestration, index)
-            self.assertNotIn(redundant_orchestration, registry)
+        for content in (index, registry):
+            for requirement in ('`tdd`', '`diagnose`', '`review`'):
+                self.assertIn(requirement, content)
+            for outdated in (
+                '`superpowers:test-driven-development`',
+                '`diagnosing-bugs`',
+                '`superpowers:systematic-debugging`',
+                '`code-review`',
+                '`github:yeet`',
+            ):
+                self.assertNotIn(outdated, content)
 
     def test_registry_lists_figma_mcp_functions_and_write_boundaries(self):
         registry = (ROOT / 'references/capability-registry.md').read_text()
@@ -96,16 +77,16 @@ class CapabilityRegistryContractTest(unittest.TestCase):
         ):
             self.assertIn(requirement, registry)
 
-    def test_registry_installs_only_missing_triggered_capabilities_then_resumes(self):
+    def test_recovery_requires_authorization_then_resumes_the_original_task(self):
         registry = (ROOT / 'references/capability-registry.md').read_text()
 
         for requirement in (
+            'ask for user approval',
+            'before installing',
             'codex plugin list',
             'codex plugin add figma@openai-curated',
-            'codex plugin add superpowers@openai-curated',
             '`skill-installer`',
             'scripts/bootstrap_dependencies.py',
-            'npx skills add larksuite/cli -g -y',
             'codex mcp add figmaremotemcp --url https://mcp.figma.com/mcp',
             'codex mcp login figmaremotemcp',
             'Read the installed `SKILL.md`',
@@ -115,29 +96,16 @@ class CapabilityRegistryContractTest(unittest.TestCase):
         ):
             self.assertIn(requirement, registry)
 
-    def test_readme_explains_the_complete_capability_inventory(self):
+    def test_readme_points_to_the_registry_without_copying_the_inventory(self):
         readme_path = ROOT / 'README.md'
         if not readme_path.exists():
             self.skipTest('installed runtime bundle does not include README.md')
         readme = readme_path.read_text()
 
-        for requirement in (
-            '## Skill、插件、MCP 和应用清单',
-            '### 必需能力',
-            '### 条件使用和可选能力',
-            '### Figma MCP 实际使用的功能',
-            '### 缺失时怎么补齐并继续',
-            '### 默认不会使用',
-            'figma@openai-curated',
-            'superpowers@openai-curated',
-            'lark-doc',
-            'Code Connect',
-            'test-driven-development',
-            'diagnosing-bugs',
-            'code-review',
-            '没有必须安装的 App 或 Connector',
-        ):
-            self.assertIn(requirement, readme)
+        self.assertIn('references/capability-index.md', readme)
+        self.assertIn('references/capability-registry.md', readme)
+        self.assertIn('安装或修改配置前', readme)
+        self.assertNotIn('## Skill、插件、MCP 和应用清单', readme)
 
 
 if __name__ == '__main__':

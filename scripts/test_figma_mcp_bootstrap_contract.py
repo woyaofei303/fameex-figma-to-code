@@ -6,13 +6,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class FigmaMcpBootstrapContractTest(unittest.TestCase):
-    def test_entry_routes_missing_runtime_tools_even_when_skill_exists(self):
+    def test_entry_repairs_triggered_runtime_tools_only_after_approval(self):
         skill = (ROOT / 'SKILL.md').read_text()
 
-        preflight = skill.split('## Workflow', 1)[0]
-        self.assertIn('required Figma tools', preflight)
-        self.assertIn('references/dependency-bootstrap.md', preflight)
-        self.assertIn('skill is missing or', preflight)
+        self.assertIn('If a triggered capability is absent', skill)
+        self.assertIn('ask before any installation or configuration change', skill)
+        self.assertIn('references/dependency-bootstrap.md', skill)
 
     def test_main_skill_separates_skill_discovery_from_mcp_availability(self):
         skill = (ROOT / 'SKILL.md').read_text()
@@ -34,6 +33,7 @@ class FigmaMcpBootstrapContractTest(unittest.TestCase):
             'codex mcp list',
             'OAuth is interactive',
             'whoami',
+            'user approval',
         ):
             self.assertIn(requirement, reference)
 
