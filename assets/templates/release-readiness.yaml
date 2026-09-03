@@ -1,0 +1,77 @@
+release:
+  feature_id: <ticket-or-name>
+  release_commit: <immutable-commit-sha>
+  target_environment: <repository-defined-environment>
+  final_status: not-ready | ready-with-known-risks | ready | released | rolled-back | verified
+
+slice_gate:
+  required_slices: []
+  verified_slices: []
+  blocked_slices: []
+  accepted_exclusions: []
+
+review:
+  merge_base: <fixed-point>
+  standards_axis:
+    status: pending | passed | failed
+    findings: []
+  spec_axis:
+    status: pending | passed | failed
+    findings: []
+
+regression_matrix:
+  - app: apps/admin | apps/web | other
+    route: <route>
+    scenario: <state-role-locale-viewport-or-api-flow>
+    command_or_browser_step: <exact-check>
+    result: pending | passed | failed | blocked
+    evidence: []
+
+build_and_ci:
+  target_environment_build:
+    command: <repository-established-command>
+    result: pending | passed | failed | blocked
+    build_evidence: []
+  ci_provider: <detected-provider-or-unresolved>
+  ci_reference: <check-url-id-or-output>
+  ci_status: pending | passed | failed | blocked
+  baseline_failures: []
+
+sign_offs:
+  product_sign_off: pending | approved | not-required
+  design_sign_off: pending | approved | not-required
+  backend_sign_off: pending | approved | not-required
+  frontend_sign_off: pending | approved
+  QA_sign_off: pending | approved | not-required
+
+rollout:
+  release_window: <time-or-unresolved>
+  deployment_pipeline: <existing-pipeline-reference>
+  release_owner: <owner>
+  deployment_authorization: not-requested | denied | approved
+  authorized_by: <identity-or-unresolved>
+  authorized_scope: <environment-and-action>
+  dependencies: []
+  feature_flag_or_exposure: <plan-or-not-required>
+  smoke_steps: []
+
+rollback:
+  rollback_trigger: []
+  rollback_action: <existing-pipeline-or-version-revert>
+  rollback_owner: <owner>
+  recovery_verification: []
+
+monitoring:
+  monitoring_owner: <owner>
+  dashboards_or_logs: []
+  alert_or_error_checks: []
+  observation_window: <duration>
+
+post_release:
+  deployed_version: <commit-tag-or-build>
+  deployed_at: <timestamp>
+  production_safe_smoke: []
+  metrics_and_errors: []
+  analytics_checks: []
+  post_release_evidence: []
+  decision: keep | rollback | observe

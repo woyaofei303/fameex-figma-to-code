@@ -1,0 +1,82 @@
+feature:
+  id: <ticket-or-name>
+  repository: <absolute-path>
+  branch: <branch>
+  mode: feature-delivery
+
+product_sources:
+  - title: <document-title>
+    url: <doc-or-wiki-url>
+    revision: <revision>
+    status: read | missing-permission
+    embedded_resources: []
+
+history_sources:
+  - kind: git-commit | task-file | integration-record | session-summary
+    locator: <exact-ticket-branch-path-or-commit>
+    verified_against_current_repo: true | false
+    facts_used: []
+
+figma_sources:
+  global_root: <figma-url>
+  discovered_nodes:
+    - node_id: <node-id>
+      state: <visible-state>
+      exact_implementation_node: true
+
+visual_evidence:
+  manifest: output-tdd/figma-audits/<task>/visual-evidence.json
+  receipt: output-tdd/figma-audits/<task>/validation-receipt.json
+  receipt_sha256: <sha256-or-null>
+  claim_level: presentation-slice-verified
+  validation_status: pending | passed | failed
+  last_validated_at: <iso-8601-or-null>
+
+traceability:
+  - requirement_id: <stable-requirement-id>
+    requirement_status: mapped | ready | blocked | verified | excluded
+    product_source: <document-section-and-revision>
+    figma_nodes:
+      - node_id: <node-id>
+        state: <visible-state>
+    app: apps/admin | apps/web | other
+    route: <route>
+    api_status: not-required | waiting | documented | integrated | verified
+    api_contract: <reference-or-unresolved>
+    code_targets: []
+    analytics: []
+    acceptance: []
+    evidence: []
+    blocker: <none-or-specific-blocker>
+
+conflicts:
+  - topic: <behavior-or-visual-conflict>
+    sources: []
+    resolution: <confirmed-answer-or-unresolved>
+    owner: <product-design-backend-frontend>
+
+slices:
+  - id: <slice-id>
+    name: <business-slice>
+    app: apps/admin | apps/web | other
+    route: <route>
+    requirements:
+      - id: <requirement-id>
+        source: <document-section-and-revision>
+    figma_nodes:
+      - node_id: <node-id>
+        state: <visible-state>
+    code_targets: []
+    api_status: not-required | waiting | documented | integrated | verified
+    api_contract: <reference-or-unresolved>
+    test_seams:
+      - <public-behavior-boundary-or-not-required>
+    acceptance: []
+    evidence: []
+    blockers: []
+    dependencies: []
+    owner: <frontend-owner>
+    development_status: planned | in-progress | verified | blocked
+    integration_status: not-required | waiting | in-progress | verified | blocked
+    regression_status: pending | verified | failed | blocked
+    release_status: not-ready | ready-with-known-risks | ready | released | rolled-back | verified

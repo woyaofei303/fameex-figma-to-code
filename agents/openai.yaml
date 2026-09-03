@@ -1,4 +1,4 @@
 interface:
   display_name: "FameEX Figma to Code"
-  short_description: "Implement FameEX interfaces from exact Figma node links"
-  default_prompt: "Use $fameex-figma-to-code to implement this exact Figma node in fameex-web and validate it in a real browser."
+  short_description: "Make targeted FameEX UI changes or strict Figma implementations"
+  default_prompt: "Use $fameex-figma-to-code for a targeted change by default, strict visual parity when explicitly required, or a full product feature when the scope spans requirements and routes."

@@ -7,6 +7,8 @@ description: Use when a task involves a Figma Design URL, exact node-id, design 
 
 Use the available Figma MCP tools. Require a design URL with an exact `node-id` when using the remote server.
 
+Installing this fallback skill does not install or authenticate the Figma MCP server. If the required tools are unavailable, authentication is unproven, or a newly registered server is not exposed to the current task, read [references/figma-mcp-config.md](references/figma-mcp-config.md) completely before continuing.
+
 ## Required Order
 
 1. Parse `fileKey` and `nodeId` from the URL.
@@ -16,6 +18,6 @@ Use the available Figma MCP tools. Require a design URL with an exact `node-id` 
 5. Fetch variables, assets, and Code Connect mappings when available.
 6. Start implementation only after structured context and a screenshot exist.
 
-Treat returned React/Tailwind as a design representation. Preserve project components, tokens, routing, state, and data patterns. Use Figma-provided assets; do not add icon packages or placeholders.
+Treat returned React/Tailwind as a design representation. Preserve project components, tokens, routing, state, and data patterns. Use Figma-provided assets and do not add icon packages. After a recorded retrieval failure, an obvious temporary placeholder is allowed only when the user permits iterative placeholder work; mark it pending and do not claim exact visual completion.
 
 Code Connect is optional. Record entitlement failures and continue with design context and screenshots.
